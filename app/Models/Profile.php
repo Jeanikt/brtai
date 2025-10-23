@@ -13,7 +13,7 @@ class Profile extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id', // ID do Supabase Auth
+        'id',
         'full_name',
         'phone',
         'avatar_url',
@@ -34,7 +34,6 @@ class Profile extends Model
 
     public function user()
     {
-        // Relacionamento com o usuário do Laravel (se existir)
         return $this->belongsTo(User::class, 'id', 'id');
     }
 
@@ -66,8 +65,8 @@ class Profile extends Model
     public function getEventLimit()
     {
         return match ($this->plan_type) {
-            'free' => 1,
-            'pro' => null, // unlimited
+            'freemium' => 1, // CORREÇÃO: 'freemium' em vez de 'free'
+            'pro' => null,
             'enterprise' => null,
             default => 1
         };
@@ -76,16 +75,13 @@ class Profile extends Model
     public function getParticipantLimit()
     {
         return match ($this->plan_type) {
-            'free' => 70,
-            'pro' => null, // unlimited
+            'freemium' => 70, // CORREÇÃO: 'freemium' em vez de 'free'
+            'pro' => null,
             'enterprise' => null,
             default => 70
         };
     }
 
-    /**
-     * Cria ou atualiza um perfil baseado nos dados do Supabase Auth
-     */
     public static function createFromSupabaseUser($supabaseUser)
     {
         return self::updateOrCreate(
