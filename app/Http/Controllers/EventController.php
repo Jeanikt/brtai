@@ -22,34 +22,37 @@ class EventController extends Controller
         $this->supabaseAuth = $supabaseAuth;
     }
 
-    /**
-     * Obtém o perfil do usuário atual
-     */
     private function getCurrentProfile()
     {
-        // Se estiver autenticado via Laravel Auth (para desenvolvimento)
         if (Auth::check() && Auth::user()->profile) {
             return Auth::user()->profile;
         }
 
-        // Tenta obter via Supabase Auth
         $profile = $this->supabaseAuth->getUserFromRequest(request());
 
         if ($profile) {
             return $profile;
         }
 
-        // Para desenvolvimento: cria um perfil de teste
         if (app()->environment('local')) {
-            return $this->supabaseAuth->createTestProfile();
+            return $this->createTestProfile();
         }
 
         abort(403, 'Usuário não autenticado.');
     }
 
-    /**
-     * Lista eventos do organizador logado.
-     */
+    private function createTestProfile()
+    {
+        return Profile::updateOrCreate(
+            ['id' => 'test-user-id'],
+            [
+                'full_name' => 'Usuário de Teste',
+                'plan_type' => 'freemium',
+                'metadata' => ['is_test_user' => true],
+            ]
+        );
+    }
+
     public function index(Request $request)
     {
         $profile = $this->getCurrentProfile();
@@ -64,22 +67,17 @@ class EventController extends Controller
         ]);
     }
 
-    /**
-     * Exibe formulário de criação.
-     */
     public function create()
     {
         return Inertia::render('Events/Create');
     }
 
-    /**
-     * Cria um novo evento.
-     */
     public function store(StoreEventRequest $request)
     {
         $profile = $this->getCurrentProfile();
 
-        if ($profile->plan_type === 'free') {
+        // CORREÇÃO: Verificar por 'freemium' em vez de 'free'
+        if ($profile->plan_type === 'freemium') {
             $activeEventsCount = Event::where('organizer_id', '=', $profile->id)
                 ->whereIn('status', ['draft', 'active'])
                 ->count();
@@ -91,7 +89,6 @@ class EventController extends Controller
             }
         }
 
-        // Usa validated() em vez de input() para acessar dados validados
         $validated = $request->validated();
 
         $data = [
@@ -111,7 +108,6 @@ class EventController extends Controller
 
         $event = Event::create($data);
 
-        // Cria níveis de preço
         $priceTiers = $validated['price_tiers'] ?? [];
         if (!empty($priceTiers)) {
             foreach ($priceTiers as $tierData) {
@@ -124,7 +120,6 @@ class EventController extends Controller
                 ]);
             }
         } else {
-            // Cria um price tier padrão se nenhum for fornecido
             PriceTier::create([
                 'event_id' => $event->id,
                 'name' => 'Entrada Geral',
@@ -138,14 +133,11 @@ class EventController extends Controller
             ->with('success', 'Evento criado com sucesso!');
     }
 
-    /**
-     * Exibe um evento.
-     */
+    // ... resto dos métodos permanecem iguais
     public function show(Event $event)
     {
         $profile = $this->getCurrentProfile();
 
-        // Verifica se o usuário tem permissão para ver este evento
         if ($event->organizer_id !== $profile->id) {
             abort(403, 'Você não tem permissão para visualizar este evento.');
         }
@@ -163,14 +155,10 @@ class EventController extends Controller
         ]);
     }
 
-    /**
-     * Edita um evento.
-     */
     public function edit(Event $event)
     {
         $profile = $this->getCurrentProfile();
 
-        // Verifica se o usuário tem permissão para editar este evento
         if ($event->organizer_id !== $profile->id) {
             abort(403, 'Você não tem permissão para editar este evento.');
         }
@@ -182,14 +170,10 @@ class EventController extends Controller
         ]);
     }
 
-    /**
-     * Atualiza um evento existente.
-     */
     public function update(UpdateEventRequest $request, Event $event)
     {
         $profile = $this->getCurrentProfile();
 
-        // Verifica se o usuário tem permissão para atualizar este evento
         if ($event->organizer_id !== $profile->id) {
             abort(403, 'Você não tem permissão para atualizar este evento.');
         }
@@ -201,14 +185,10 @@ class EventController extends Controller
             ->with('success', 'Evento atualizado com sucesso!');
     }
 
-    /**
-     * Exclui um evento.
-     */
     public function destroy(Event $event)
     {
         $profile = $this->getCurrentProfile();
 
-        // Verifica se o usuário tem permissão para excluir este evento
         if ($event->organizer_id !== $profile->id) {
             abort(403, 'Você não tem permissão para excluir este evento.');
         }
@@ -219,14 +199,10 @@ class EventController extends Controller
             ->with('success', 'Evento excluído com sucesso!');
     }
 
-    /**
-     * Publica um evento (torna ativo).
-     */
     public function publish(Request $request, Event $event)
     {
         $profile = $this->getCurrentProfile();
 
-        // Verifica se o usuário tem permissão para publicar este evento
         if ($event->organizer_id !== $profile->id) {
             abort(403, 'Você não tem permissão para publicar este evento.');
         }
@@ -236,14 +212,10 @@ class EventController extends Controller
         return redirect()->back()->with('success', 'Evento publicado com sucesso!');
     }
 
-    /**
-     * Exibe métricas do evento.
-     */
     public function analytics(Event $event)
     {
         $profile = $this->getCurrentProfile();
 
-        // Verifica se o usuário tem permissão para ver as métricas deste evento
         if ($event->organizer_id !== $profile->id) {
             abort(403, 'Você não tem permissão para visualizar as métricas deste evento.');
         }

@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Participant;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class ExportController extends Controller
 {
     public function participants(Event $event)
     {
-        $this->authorize('view', $event);
+        // Verificação manual de autorização - usando o profile do usuário
+        $user = Auth::user();
+        if (!$user || !$user->profile || $user->profile->id !== $event->organizer_id) {
+            abort(403, 'Você não tem permissão para exportar os participantes deste evento.');
+        }
 
         $participants = $event->participants()
             ->with('priceTier')
@@ -27,8 +31,6 @@ class ExportController extends Controller
 
         $callback = function () use ($participants) {
             $handle = fopen('php://output', 'w');
-
-            // Add BOM for UTF-8
             fwrite($handle, "\xEF\xBB\xBF");
 
             fputcsv($handle, [
@@ -48,7 +50,7 @@ class ExportController extends Controller
                     $participant->full_name,
                     $participant->email,
                     $participant->phone,
-                    number_format($participant->payment_amount, 2, ',', ''),
+                    number_format($participant->payment_amount ?? 0, 2, ',', ''),
                     $this->getPaymentStatusText($participant->payment_status),
                     $participant->priceTier->name,
                     $participant->created_at->format('d/m/Y H:i'),
@@ -65,7 +67,11 @@ class ExportController extends Controller
 
     public function eventFinancials(Event $event)
     {
-        $this->authorize('view', $event);
+        // Verificação manual de autorização - usando o profile do usuário
+        $user = Auth::user();
+        if (!$user || !$user->profile || $user->profile->id !== $event->organizer_id) {
+            abort(403, 'Você não tem permissão para exportar os dados financeiros deste evento.');
+        }
 
         $participants = $event->participants()
             ->with('priceTier')
@@ -82,20 +88,16 @@ class ExportController extends Controller
 
         $callback = function () use ($event, $participants) {
             $handle = fopen('php://output', 'w');
-
-            // Add BOM for UTF-8
             fwrite($handle, "\xEF\xBB\xBF");
 
-            // Event summary
             fputcsv($handle, ['Resumo do Evento']);
             fputcsv($handle, ['Nome do Evento:', $event->name]);
             fputcsv($handle, ['Data do Evento:', $event->event_date->format('d/m/Y H:i')]);
-            fputcsv($handle, ['Total Arrecadado:', 'R$ ' . number_format($event->total_revenue, 2, ',', '.')]);
+            fputcsv($handle, ['Total Arrecadado:', 'R$ ' . number_format($event->total_revenue ?? 0, 2, ',', '.')]);
             fputcsv($handle, ['Participantes Confirmados:', $event->confirmed_count]);
             fputcsv($handle, []);
             fputcsv($handle, []);
 
-            // Participants details
             fputcsv($handle, ['Detalhamento dos Participantes']);
             fputcsv($handle, [
                 'Nome',
@@ -112,8 +114,8 @@ class ExportController extends Controller
             $totalNet = 0;
 
             foreach ($participants as $participant) {
-                $fee = $this->calculateFee($participant->payment_amount, $event->organizer);
-                $netAmount = $participant->payment_amount - $fee;
+                $fee = $this->calculateFee($participant->payment_amount ?? 0, $event->organizer);
+                $netAmount = ($participant->payment_amount ?? 0) - $fee;
 
                 $totalFees += $fee;
                 $totalNet += $netAmount;
@@ -122,18 +124,17 @@ class ExportController extends Controller
                     $participant->full_name,
                     $participant->email,
                     $participant->phone,
-                    number_format($participant->payment_amount, 2, ',', ''),
+                    number_format($participant->payment_amount ?? 0, 2, ',', ''),
                     number_format($fee, 2, ',', ''),
                     number_format($netAmount, 2, ',', ''),
-                    $participant->confirmed_at->format('d/m/Y H:i'),
+                    $participant->confirmed_at?->format('d/m/Y H:i') ?? 'N/A',
                     $participant->priceTier->name
                 ]);
             }
 
-            // Summary
             fputcsv($handle, []);
             fputcsv($handle, ['Resumo Financeiro']);
-            fputcsv($handle, ['Total Bruto Arrecadado:', 'R$ ' . number_format($event->total_revenue, 2, ',', '.')]);
+            fputcsv($handle, ['Total Bruto Arrecadado:', 'R$ ' . number_format($event->total_revenue ?? 0, 2, ',', '.')]);
             fputcsv($handle, ['Total Taxas BrotaAI:', 'R$ ' . number_format($totalFees, 2, ',', '.')]);
             fputcsv($handle, ['Total Líquido:', 'R$ ' . number_format($totalNet, 2, ',', '.')]);
 

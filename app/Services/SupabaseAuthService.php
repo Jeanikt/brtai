@@ -17,12 +17,8 @@ class SupabaseAuthService
         $this->supabaseKey = config('services.supabase.key');
     }
 
-    /**
-     * Obtém o usuário atual do Supabase Auth a partir do request
-     */
     public function getUserFromRequest($request)
     {
-        // Para desenvolvimento, retorna um perfil de teste
         if (app()->environment('local')) {
             return Profile::where('metadata->is_test_user', true)->first();
         }
@@ -42,17 +38,11 @@ class SupabaseAuthService
         return $this->syncProfile($userData);
     }
 
-    /**
-     * Extrai o token do request
-     */
     private function getTokenFromRequest($request)
     {
         return $request->bearerToken() ?: $request->cookie('sb-access-token');
     }
 
-    /**
-     * Obtém o usuário do Supabase Auth
-     */
     public function getCurrentUser($accessToken)
     {
         try {
@@ -76,9 +66,6 @@ class SupabaseAuthService
         return null;
     }
 
-    /**
-     * Sincroniza o perfil local com os dados do Supabase Auth
-     */
     public function syncProfile($supabaseUser)
     {
         $userData = $supabaseUser['user'] ?? $supabaseUser;
