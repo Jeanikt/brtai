@@ -4,10 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Participant extends Model
 {
     use HasFactory;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'event_id',
@@ -33,6 +37,15 @@ class Participant extends Model
         'metadata' => 'array'
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($participant) {
+            if (empty($participant->id)) {
+                $participant->id = (string) Str::uuid();
+            }
+        });
+    }
+
     public function event()
     {
         return $this->belongsTo(Event::class);
@@ -43,9 +56,9 @@ class Participant extends Model
         return $this->belongsTo(PriceTier::class);
     }
 
-    public function paymentTransaction()
+    public function paymentTransactions()
     {
-        return $this->hasOne(PaymentTransaction::class);
+        return $this->hasMany(PaymentTransaction::class);
     }
 
     public function notifications()
@@ -63,11 +76,23 @@ class Participant extends Model
         return $query->where('payment_status', 'pending');
     }
 
+    public function scopeFailed($query)
+    {
+        return $query->where('payment_status', 'failed');
+    }
+
     public function markAsPaid()
     {
         $this->update([
             'payment_status' => 'paid',
             'confirmed_at' => now()
+        ]);
+    }
+
+    public function markAsFailed()
+    {
+        $this->update([
+            'payment_status' => 'failed'
         ]);
     }
 
@@ -81,6 +106,16 @@ class Participant extends Model
         return $this->payment_status === 'paid';
     }
 
+    public function isPending()
+    {
+        return $this->payment_status === 'pending';
+    }
+
+    public function isFailed()
+    {
+        return $this->payment_status === 'failed';
+    }
+
     public function isCheckedIn()
     {
         return !is_null($this->checked_in_at);
@@ -88,6 +123,22 @@ class Participant extends Model
 
     public function isPixExpired()
     {
-        return $this->pix_expires_at && $this->pix_expires_at < now();
+        return $this->pix_expires_at && $this->pix_expires_at->isPast();
+    }
+
+    public function getFormattedPaymentAmountAttribute()
+    {
+        $amount = (float) $this->payment_amount;
+        return 'R$ ' . number_format($amount, 2, ',', '.');
+    }
+
+    public function getStatusBadgeAttribute()
+    {
+        return match ($this->payment_status) {
+            'paid' => ['class' => 'bg-green-100 text-green-800', 'text' => 'Pago'],
+            'pending' => ['class' => 'bg-yellow-100 text-yellow-800', 'text' => 'Pendente'],
+            'failed' => ['class' => 'bg-red-100 text-red-800', 'text' => 'Falhou'],
+            default => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Desconhecido']
+        };
     }
 }

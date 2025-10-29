@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Profile;
+use App\Models\User;
 use App\Services\SupabaseAuthService;
 use Closure;
 use Illuminate\Http\Request;
@@ -20,27 +21,33 @@ class SupabaseAuth
 
     public function handle(Request $request, Closure $next)
     {
-        // Se já estiver autenticado, continua
         if (Auth::check()) {
             return $next($request);
         }
 
-        // Tenta autenticar via Supabase
         $profile = $this->supabaseAuth->getUserFromRequest($request);
 
         if ($profile) {
-            Auth::login($profile);
+            $user = User::firstOrCreate(
+                ['id' => $profile->id],
+                ['name' => $profile->full_name, 'email' => $profile->email ?? '']
+            );
+
+            Auth::login($user);
             return $next($request);
         }
 
-        // Em desenvolvimento, cria um usuário de teste
         if (app()->environment('local') && $request->isMethod('get')) {
             $testProfile = $this->createTestProfile();
-            Auth::login($testProfile);
+            $user = User::firstOrCreate(
+                ['id' => $testProfile->id],
+                ['name' => $testProfile->full_name, 'email' => 'test@example.com']
+            );
+
+            Auth::login($user);
             return $next($request);
         }
 
-        // Se não estiver autenticado, redireciona para login
         if ($request->expectsJson()) {
             return response()->json(['error' => 'Unauthenticated.'], 401);
         }
@@ -51,8 +58,9 @@ class SupabaseAuth
     private function createTestProfile()
     {
         return Profile::firstOrCreate(
-            ['id' => 'test-user-id-12345'], 
+            ['metadata->is_test_user' => true],
             [
+                'id' => (string) Str::uuid(),
                 'full_name' => 'Usuário de Teste',
                 'plan_type' => 'freemium',
                 'email_verified_at' => now(),

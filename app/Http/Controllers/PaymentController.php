@@ -6,33 +6,32 @@ use App\Models\Participant;
 use App\Models\PaymentTransaction;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class PaymentController extends Controller
 {
-    public function checkout(Participant $participant)
-    {
-        $event = $participant->event;
+    private $apiKey = 'abc_dev_2zd5G3HnxkPTxcPs3qd56Kkz';
+    private $baseUrl = 'https://api.abacatepay.com/v1';
 
-        // Check if participant already paid
+    public function checkout($participantId)
+    {
+        $participant = Participant::findOrFail($participantId);
+
         if ($participant->isPaid()) {
             return redirect()->route('payment.success', $participant->id);
         }
 
-        // Check if Pix is expired
-        if ($participant->pix_code && $participant->isPixExpired()) {
-            $participant->update([
-                'pix_code' => null,
-                'pix_expires_at' => null,
-            ]);
-        }
-
-        // Generate new Pix if needed
-        if (!$participant->pix_code) {
-            $pixData = $this->generatePix($participant);
-            $participant->update([
-                'pix_code' => $pixData['pix_code'],
-                'pix_expires_at' => $pixData['expires_at'],
-            ]);
+        if (!$participant->pix_code || $participant->isPixExpired()) {
+            try {
+                $pixData = $this->generatePixPayment($participant);
+                $participant->update([
+                    'pix_code' => $pixData['pix_code'],
+                    'pix_expires_at' => $pixData['expires_at'],
+                    'transaction_id' => $pixData['transaction_id']
+                ]);
+            } catch (\Exception $e) {
+                return back()->withErrors(['payment' => 'Erro ao gerar pagamento PIX: ' . $e->getMessage()]);
+            }
         }
 
         return Inertia::render('Payment/Checkout', [
@@ -42,8 +41,10 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function success(Participant $participant)
+    public function success($participantId)
     {
+        $participant = Participant::findOrFail($participantId);
+
         if (!$participant->isPaid()) {
             return redirect()->route('payment.checkout', $participant->id);
         }
@@ -54,34 +55,52 @@ class PaymentController extends Controller
             'participant' => $participant,
             'event' => $event,
             'location' => $event->location_reveal_after_payment ? $event->location : null,
-            'whatsapp_group' => $event->metadata['whatsapp_group'] ?? null,
         ]);
     }
 
-    public function status(Participant $participant)
+    public function status($participantId)
     {
+        $participant = Participant::findOrFail($participantId);
+
         return response()->json([
             'paid' => $participant->isPaid(),
             'status' => $participant->payment_status,
         ]);
     }
 
-    private function generatePix(Participant $participant)
+    private function generatePixPayment(Participant $participant)
     {
-        // TODO: Integrate with AbacatePay API
-        // This is a mock implementation
-        $pixCode = "00020126580014br.gov.bcb.pix0136" . uniqid() . "5204000053039865406" . number_format($participant->payment_amount, 2, '.', '') . "5802BR5913BROTAAI PLAT6008BRASILIA62070503***6304" . strtoupper(uniqid());
+        $event = $participant->event;
+        $priceTier = $participant->priceTier;
 
-        return [
-            'pix_code' => $pixCode,
-            'expires_at' => now()->addHours(24),
-            'qr_code' => $this->generateQrCode($pixCode),
+        $payload = [
+            'amount' => (float) $priceTier->price * 100,
+            'currency' => 'BRL',
+            'description' => "Ingresso: {$event->name} - {$priceTier->name}",
+            'payment_method' => 'pix',
+            'metadata' => [
+                'participant_id' => $participant->id,
+                'event_id' => $event->id,
+                'price_tier_id' => $priceTier->id
+            ],
+            'success_url' => route('payment.success', $participant->id),
+            'webhook_url' => route('webhooks.abacatepay')
         ];
-    }
 
-    private function generateQrCode($pixCode)
-    {
-        // TODO: Generate QR code image using a library
-        return "data:image/png;base64," . base64_encode("mock-qr-code-for-{$pixCode}");
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Content-Type' => 'application/json'
+        ])->post($this->baseUrl . '/payments', $payload);
+
+        if ($response->successful()) {
+            $paymentData = $response->json();
+            return [
+                'pix_code' => $paymentData['pix_code'],
+                'expires_at' => now()->addMinutes(30),
+                'transaction_id' => $paymentData['id']
+            ];
+        }
+
+        throw new \Exception('Falha ao gerar pagamento PIX: ' . $response->body());
     }
 }

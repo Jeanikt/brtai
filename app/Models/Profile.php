@@ -65,7 +65,7 @@ class Profile extends Model
     public function getEventLimit()
     {
         return match ($this->plan_type) {
-            'freemium' => 1, // CORREÇÃO: 'freemium' em vez de 'free'
+            'freemium' => 1,
             'pro' => null,
             'enterprise' => null,
             default => 1
@@ -75,7 +75,7 @@ class Profile extends Model
     public function getParticipantLimit()
     {
         return match ($this->plan_type) {
-            'freemium' => 70, // CORREÇÃO: 'freemium' em vez de 'free'
+            'freemium' => 70,
             'pro' => null,
             'enterprise' => null,
             default => 70
