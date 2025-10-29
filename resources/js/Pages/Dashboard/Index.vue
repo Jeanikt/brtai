@@ -123,7 +123,7 @@
                 <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white mb-6">
                     <h3 class="text-xl font-bold mb-2">Plano {{ plan.type }}</h3>
                     <p class="text-green-100">
-                        {{ plan.type === 'free' ? 'Até 70 participantes por evento' : 'Participantes ilimitados' }}
+                        {{ plan.type === 'freemium' ? 'Até 70 participantes por evento' : 'Participantes ilimitados' }}
                     </p>
                 </div>
 
@@ -143,12 +143,12 @@
                     <div class="flex justify-between items-center py-3">
                         <span class="text-gray-600">Taxa por transação</span>
                         <span class="font-semibold">
-                            {{ plan.type === 'free' ? '6.5% + R$0,80' : '5.5% + R$0,80' }}
+                            {{ plan.type === 'freemium' ? '6.5% + R$0,80' : '5.5% + R$0,80' }}
                         </span>
                     </div>
                 </div>
 
-                <div v-if="plan.type === 'free'" class="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div v-if="plan.type === 'freemium'" class="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                     <p class="text-sm text-orange-800 mb-3">
                         <strong>Upgrade para Pro:</strong> Eventos ilimitados e taxa reduzida!
                     </p>
@@ -221,7 +221,7 @@ defineProps({
     plan: {
         type: Object,
         default: () => ({
-            type: 'free',
+            type: 'freemium',
             event_limit: 1,
             participant_limit: 70
         })

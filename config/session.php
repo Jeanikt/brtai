@@ -13,12 +13,12 @@ return [
     | incoming requests. Laravel supports a variety of storage options to
     | persist session data. Database storage is a great default choice.
     |
-    | Supported: "file", "cookie", "database", "memcached",
-    |            "redis", "dynamodb", "array"
+    | Supported: "file", "cookie", "database", "apc",
+    |            "memcached", "redis", "dynamodb", "array"
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => env('SESSION_DRIVER', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -32,7 +32,7 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => env('SESSION_LIFETIME', 120),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
@@ -95,9 +95,7 @@ return [
     |
     | When using one of the framework's cache driven session backends, you may
     | define the cache store which should be used to store the session data
-    | between requests. This must match one of your defined cache stores.
-    |
-    | Affects: "dynamodb", "memcached", "redis"
+    | between requests. This must match one of your defined cache "stores".
     |
     */
 
@@ -123,13 +121,13 @@ return [
     |
     | Here you may change the name of the session cookie that is created by
     | the framework. Typically, you should not need to change this value
-    | since doing so does not grant a meaningful security improvement.
+    | since Laravel's default naming convention is quite sensible.
     |
     */
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        Str::slug(env('APP_NAME', 'laravel'), '_') . '_session'
     ),
 
     /*
@@ -150,9 +148,9 @@ return [
     | Session Cookie Domain
     |--------------------------------------------------------------------------
     |
-    | This value determines the domain and subdomains the session cookie is
-    | available to. By default, the cookie will be available to the root
-    | domain and all subdomains. Typically, this shouldn't be changed.
+    | This value determines the domain on which the session cookie will be
+    | available. Typically, this will be the application's root domain or
+    | a subdomain of it. You're free to change this value when needed.
     |
     */
 
@@ -193,8 +191,6 @@ return [
     | take place, and can be used to mitigate CSRF attacks. By default, we
     | will set this value to "lax" to permit secure cross-site requests.
     |
-    | See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
-    |
     | Supported: "lax", "strict", "none", null
     |
     */
@@ -208,7 +204,7 @@ return [
     |
     | Setting this value to true will tie the cookie to the top-level site for
     | a cross-site context. Partitioned cookies are accepted by the browser
-    | when flagged "secure" and the Same-Site attribute is set to "none".
+    | when flagged "secure" and the same-site attribute is set to "none".
     |
     */
 

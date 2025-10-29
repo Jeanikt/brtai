@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Participant;
 use App\Models\PaymentTransaction;
 use App\Models\WebhookLog;
-use App\Jobs\ProcessPaymentWebhook;
 use Illuminate\Http\Request;
 
 class WebhookController extends Controller
@@ -15,85 +14,83 @@ class WebhookController extends Controller
         $payload = $request->all();
         $signature = $request->header('X-Signature');
 
-        // Log webhook
         $webhookLog = WebhookLog::create([
             'source' => 'abacate_pay',
             'event_type' => $payload['event'] ?? 'unknown',
             'payload' => $payload,
         ]);
 
-        // Verify signature (implement based on AbacatePay docs)
         if (!$this->verifySignature($request)) {
-            $webhookLog->markAsProcessed(401, 'Invalid signature');
+            $webhookLog->update([
+                'status_code' => 401,
+                'response' => 'Invalid signature'
+            ]);
             return response()->json(['error' => 'Invalid signature'], 401);
         }
 
-        // Process webhook asynchronously
-        ProcessPaymentWebhook::dispatch($webhookLog);
+        if ($payload['event'] === 'payment.completed') {
+            $this->handlePaymentCompleted($payload['data']);
+        }
 
-        $webhookLog->markAsProcessed(200, 'Webhook accepted for processing');
+        $webhookLog->update([
+            'status_code' => 200,
+            'response' => 'Webhook processed successfully',
+            'processed_at' => now()
+        ]);
 
-        return response()->json(['status' => 'accepted']);
+        return response()->json(['status' => 'success']);
     }
 
     private function verifySignature(Request $request)
     {
-        $secret = config('services.abacate_pay.webhook_secret');
+        $secret = 'webh_dev_24Kzwr0q6YCHGzkDUeGAQ6JL';
         $payload = $request->getContent();
         $signature = $request->header('X-Signature');
 
-        // TODO: Implement proper signature verification
-        // This is a placeholder implementation
         return hash_hmac('sha256', $payload, $secret) === $signature;
     }
 
-    public function handlePixPayment($webhookLog)
+    private function handlePaymentCompleted($paymentData)
     {
-        $payload = $webhookLog->payload;
+        $transactionId = $paymentData['id'] ?? null;
+        $status = $paymentData['status'] ?? null;
+        $amount = $paymentData['amount'] ?? null;
 
-        // Extract transaction data from payload
-        $transactionId = $payload['transaction_id'] ?? null;
-        $status = $payload['status'] ?? null;
-        $amount = $payload['amount'] ?? null;
-
-        if (!$transactionId || !$status) {
+        if (!$transactionId || $status !== 'completed') {
             return;
         }
 
-        // Find participant by transaction ID
         $participant = Participant::where('transaction_id', $transactionId)->first();
 
         if (!$participant) {
             return;
         }
 
-        // Update payment status
-        if ($status === 'paid' && $participant->payment_status !== 'paid') {
-            $participant->markAsPaid();
+        if ($participant->payment_status !== 'paid') {
+            $participant->update([
+                'payment_status' => 'paid',
+                'confirmed_at' => now()
+            ]);
 
-            // Create payment transaction record
             PaymentTransaction::create([
                 'participant_id' => $participant->id,
                 'event_id' => $participant->event_id,
-                'amount' => $amount,
+                'amount' => $amount / 100,
                 'status' => 'completed',
                 'gateway' => 'abacate_pay',
                 'gateway_transaction_id' => $transactionId,
-                'gateway_response' => $payload,
-                'fee_amount' => $this->calculateFee($amount, $participant),
-                'net_amount' => $amount - $this->calculateFee($amount, $participant),
+                'gateway_response' => $paymentData,
+                'fee_amount' => $this->calculateFee($amount / 100, $participant),
+                'net_amount' => ($amount / 100) - $this->calculateFee($amount / 100, $participant),
                 'processed_at' => now(),
             ]);
-
-            // TODO: Send confirmation notification
-            // Notification::sendPaymentConfirmation($participant);
         }
     }
 
     private function calculateFee($amount, $participant)
     {
         $organizer = $participant->event->organizer;
-        $feePercentage = $organizer->isPro() ? 0.055 : 0.065;
+        $feePercentage = $organizer->plan_type === 'pro' ? 0.055 : 0.065;
         $fixedFee = 0.80;
 
         return ($amount * $feePercentage) + $fixedFee;

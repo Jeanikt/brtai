@@ -1,18 +1,10 @@
 <template>
     <div class="space-y-6">
-        <!-- Cabeçalho -->
         <div class="flex justify-between items-start">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">{{ event.name }}</h1>
                 <p class="text-gray-600">
-                    {{ new Date(event.event_date).toLocaleDateString('pt-BR', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                    minute: '2-digit'
-                    }) }}
+                    {{ formatEventDate(event.event_date) }}
                 </p>
             </div>
             <div class="flex space-x-3">
@@ -27,7 +19,6 @@
             </div>
         </div>
 
-        <!-- Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl shadow-md border border-gray-100 text-center">
                 <p class="text-2xl font-bold text-gray-900">{{ stats.confirmed_count }}</p>
@@ -47,11 +38,8 @@
             </div>
         </div>
 
-        <!-- Grid Principal -->
         <div class="grid lg:grid-cols-3 gap-6">
-            <!-- Informações do Evento -->
             <div class="lg:col-span-2 space-y-6">
-                <!-- Detalhes -->
                 <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">Detalhes do Evento</h2>
                     <div class="space-y-4">
@@ -70,7 +58,6 @@
                     </div>
                 </div>
 
-                <!-- Participantes -->
                 <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-semibold text-gray-900">Participantes</h2>
@@ -106,9 +93,7 @@
                 </div>
             </div>
 
-            <!-- Sidebar -->
             <div class="space-y-6">
-                <!-- Ações Rápidas -->
                 <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
                     <div class="space-y-3">
@@ -130,7 +115,6 @@
                     </div>
                 </div>
 
-                <!-- Informações de Pagamento -->
                 <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">Informações Financeiras</h2>
                     <div class="space-y-3">
@@ -176,7 +160,13 @@ const props = defineProps({
 })
 
 const publishEvent = () => {
-    router.post(route('events.publish', props.event.id))
+    if (confirm('Tem certeza que deseja publicar este evento?')) {
+        router.post(route('events.publish', props.event.id), {}, {
+            onSuccess: () => {
+                router.reload({ only: ['event'] })
+            }
+        })
+    }
 }
 
 const copyEventLink = () => {
@@ -185,8 +175,18 @@ const copyEventLink = () => {
     alert('Link copiado para a área de transferência!')
 }
 
+const formatEventDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
+
 const calculateFees = (revenue) => {
-    // Taxa de 6.5% + R$0,80 por transação (simplificado)
     return (revenue * 0.065).toFixed(2)
 }
 
