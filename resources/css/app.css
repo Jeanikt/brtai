@@ -1,3 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.font-prompt {
+  font-family: 'Prompt', sans-serif;
+}
+
+
+header {
+    background-image: url('/img/home-background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Melhorias para mobile */
+@media (max-width: 640px) {
+    header {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Transições suaves para todos os elementos interativos */
+* {
+    transition-property: color, background-color, border-color, transform, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+}
