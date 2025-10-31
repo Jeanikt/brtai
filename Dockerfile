@@ -3,22 +3,24 @@
 # ============================
 FROM node:20 AS build-frontend
 
-# Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar apenas os arquivos necessários para instalar dependências
+# Copiar os arquivos necessários para instalar dependências
 COPY package*.json ./
 
-# Atualizar o npm para evitar bugs de resolução de dependências
+# Atualizar npm para versão estável
 RUN npm install -g npm@latest
 
-# Instalar dependências do frontend (ignorando conflitos)
+# Instalar dependências do frontend (ignorando conflitos de peer)
 RUN npm install --legacy-peer-deps
 
-# Copiar todo o código para o container
+# Copiar todo o código do projeto
 COPY . .
 
-# Gerar build de produção do Vue (Vite)
+# Criar diretório fictício do Ziggy para evitar erro no build
+RUN mkdir -p vendor/tightenco/ziggy && echo "export default {};" > vendor/tightenco/ziggy/index.js
+
+# Gerar build de produção do Vite
 RUN npm run build
 
 
@@ -27,7 +29,7 @@ RUN npm run build
 # ============================
 FROM php:8.3-fpm
 
-# Instalar dependências do sistema e extensões PHP necessárias
+# Instalar dependências do sistema e extensões PHP
 RUN apt-get update && apt-get install -y \
     git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
@@ -38,10 +40,10 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Criar diretório de trabalho
 WORKDIR /var/www/html
 
-# Copiar arquivos do Laravel (exceto node_modules, vendor, etc.)
+# Copiar arquivos do Laravel
 COPY . .
 
-# Copiar build do frontend da etapa anterior
+# Copiar build gerado do frontend
 COPY --from=build-frontend /app/public ./public
 
 # Instalar dependências do Laravel
@@ -50,11 +52,9 @@ RUN composer install --no-dev --no-interaction --optimize-autoloader
 # Gerar cache de configuração
 RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
 
-# Permitir escrita em storage e bootstrap
+# Corrigir permissões
 RUN chmod -R 775 storage bootstrap/cache
 
-# Expor a porta padrão do Laravel
 EXPOSE 8000
 
-# Comando padrão de execução
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
