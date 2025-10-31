@@ -17,16 +17,14 @@ class StoreEventRequest extends FormRequest
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'event_date' => 'required|date|after:now',
+            'event_time' => 'required|date_format:H:i',
             'location' => 'required|string|max:500',
             'location_reveal_after_payment' => 'boolean',
             'header_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'theme' => 'nullable|string|max:255',
             'rules' => 'nullable|string',
             'max_participants' => 'nullable|integer|min:1',
-            'price_tiers' => 'nullable|array',
-            'price_tiers.*.name' => 'required|string|max:255',
-            'price_tiers.*.price' => 'required|numeric|min:0',
-            'price_tiers.*.max_quantity' => 'nullable|integer|min:1',
+            'price' => 'required|numeric|min:0',
         ];
     }
 

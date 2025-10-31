@@ -17,11 +17,18 @@ class DashboardController extends Controller
             'plan_type' => 'freemium',
         ]);
 
-        $events = Event::with(['confirmedParticipants', 'priceTiers'])
-            ->where('organizer_id', $profile->id)
-            ->orderBy('event_date', 'desc')
+        $query = Event::with(['confirmedParticipants', 'priceTiers'])
+            ->where('organizer_id', $profile->id);
+
+        if ($request->has('filter') && $request->filter !== 'all') {
+            $query->where('status', $request->filter);
+        }
+
+        $events = $query->orderBy('event_date', 'desc')
             ->get()
             ->map(function ($event) {
+                $lowestPrice = $event->priceTiers->min('price') ?? 0;
+
                 return [
                     'id' => $event->id,
                     'name' => $event->name,
@@ -30,8 +37,10 @@ class DashboardController extends Controller
                     'location' => $event->location,
                     'header_image_url' => $event->header_image_url,
                     'status' => $event->status,
-                    'confirmed_count' => $event->confirmed_count,
+                    'confirmed_count' => $event->confirmedParticipants->count(),
                     'total_revenue' => $event->total_revenue,
+                    'price' => $lowestPrice,
+                    'slug' => $event->slug,
                 ];
             });
 
@@ -54,7 +63,8 @@ class DashboardController extends Controller
                 'event_limit' => $profile->getEventLimit(),
                 'participant_limit' => $profile->getParticipantLimit(),
                 'active_events_count' => $activeEventsCount,
-            ]
+            ],
+            'filters' => $request->only(['filter'])
         ]);
     }
 

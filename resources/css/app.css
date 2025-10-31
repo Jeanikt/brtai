@@ -1,53 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 .font-prompt {
-  font-family: 'Prompt', sans-serif;
+  font-family: "Prompt", sans-serif;
 }
 
-
-header {
-    background-image: url('/img/home-background.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
+/* Removido background-image do header pois não é usado no Figma */
 
 /* Melhorias para mobile */
 @media (max-width: 640px) {
-    header {
-        min-height: 70vh;
-        display: flex;
-        align-items: center;
-    }
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 /* Transições suaves para todos os elementos interativos */
 * {
-    transition-property: color, background-color, border-color, transform, box-shadow;
-    transition-duration: 200ms;
-    transition-timing-function: ease-in-out;
-}
-
-/* Melhorias para a experiência mobile */
-@media (max-width: 640px) {
-    .min-h-screen {
-        min-height: 100vh;
-        min-height: 100dvh;
-    }
+  transition-property: color, background-color, border-color, transform, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
 }
 
 /* Melhorar a aparência dos inputs */
 input {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 input:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 168, 89, 0.1);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 168, 89, 0.1);
+}
+
+/* Adicionado estilo para botões arredondados do Figma */
+.rounded-full {
+  border-radius: 9999px;
+}
+
+/* Garantir que cards tenham cantos bem arredondados */
+[class*="rounded-[32px]"] {
+  border-radius: 32px;
 }

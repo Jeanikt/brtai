@@ -103,12 +103,14 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
+        $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+
         $eventData = [
             'organizer_id' => $profile->id,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'slug' => Str::slug($validated['name']) . '-' . Str::random(6),
-            'event_date' => $validated['event_date'],
+            'event_date' => $eventDateTime,
             'location' => $validated['location'],
             'location_reveal_after_payment' => (bool) ($validated['location_reveal_after_payment'] ?? true),
             'theme' => $validated['theme'] ?? null,
@@ -117,27 +119,17 @@ class EventController extends Controller
             'status' => 'draft',
             'is_public' => true,
         ];
-
         if (request()->hasFile('header_image')) {
             $headerImage = request()->file('header_image');
 
             if ($headerImage && $headerImage->isValid()) {
                 try {
-                    Log::info('Tentando fazer upload da imagem do evento', [
-                        'file_name' => $headerImage->getClientOriginalName(),
-                        'file_size' => $headerImage->getSize()
-                    ]);
-
                     $imagePath = $this->imageService->uploadEventBanner(
                         $headerImage,
                         $profile->id
                     );
 
                     $eventData['header_image_url'] = $imagePath;
-
-                    Log::info('Upload da imagem realizado com sucesso', [
-                        'image_url' => $imagePath
-                    ]);
                 } catch (\Exception $e) {
                     Log::error('Erro no upload da imagem: ' . $e->getMessage());
 
@@ -150,7 +142,7 @@ class EventController extends Controller
 
         try {
             $event = Event::create($eventData);
-            $this->createPriceTiers($event, $validated['price_tiers'] ?? []);
+            $this->createPriceTiers($event, $validated);
             $this->cacheService->invalidateUserCaches($profile->id);
 
             return redirect()->route('events.show', $event->id)
@@ -209,8 +201,6 @@ class EventController extends Controller
                 $validated['max_participants']
             );
         }
-
-
         if (request()->hasFile('header_image')) {
             $headerImage = request()->file('header_image');
             if ($headerImage && $headerImage->isValid()) {
@@ -335,26 +325,16 @@ class EventController extends Controller
         return min($requestedMax, $planLimit);
     }
 
-    private function createPriceTiers(Event $event, array $priceTiers)
+    private function createPriceTiers(Event $event, array $validated)
     {
-        if (!empty($priceTiers)) {
-            foreach ($priceTiers as $tierData) {
-                PriceTier::create([
-                    'event_id' => $event->id,
-                    'name' => $tierData['name'] ?? 'Entrada',
-                    'price' => $tierData['price'] ?? 0,
-                    'max_quantity' => $tierData['max_quantity'] ?? null,
-                    'is_active' => true,
-                ]);
-            }
-        } else {
-            PriceTier::create([
-                'event_id' => $event->id,
-                'name' => 'Entrada Geral',
-                'price' => 30.00,
-                'max_quantity' => null,
-                'is_active' => true,
-            ]);
-        }
+        $price = $validated['price'] ?? 30.00;
+
+        PriceTier::create([
+            'event_id' => $event->id,
+            'name' => 'Entrada Geral',
+            'price' => $price,
+            'max_quantity' => null,
+            'is_active' => true,
+        ]);
     }
 }
