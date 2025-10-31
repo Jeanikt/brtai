@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Instalar dependências do frontend
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copiar todo o código e gerar o build de produção
 COPY . .
