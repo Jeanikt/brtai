@@ -23,6 +23,7 @@ class UpdateEventRequest extends FormRequest
             'theme' => 'nullable|string|max:255',
             'rules' => 'nullable|string',
             'max_participants' => 'nullable|integer|min:1',
+            'price' => 'required|numeric|min:0',
         ];
     }
 

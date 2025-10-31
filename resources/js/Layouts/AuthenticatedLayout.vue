@@ -1,72 +1,102 @@
 <template>
-    <div class="min-h-screen bg-white font-prompt">
-        <!-- Nav no padrão Figma -->
-        <nav
-            class="fixed top-6 left-1/2 transform -translate-x-1/2 w-[375px] h-[99px] bg-white rounded-[44px] shadow-lg z-50">
-            <div class="flex justify-between items-center h-full px-8">
-                <div class="flex items-center">
-                    <Link :href="route('dashboard')">
-                    <ApplicationLogo class="block h-8 w-auto" fill="black" />
+    <div class="min-h-screen bg-gray-50 font-prompt">
+        <!-- Nav with responsive design matching Figma -->
+        <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <!-- Logo -->
+                    <Link :href="route('dashboard')" class="flex items-center">
+                        <ApplicationLogo fill="black" />
+                    </Link>
+
+                    <!-- Desktop Navigation -->
+                    <div class="hidden md:flex items-center gap-4">
+                        <span class="text-sm font-medium text-gray-900">
+                            {{ $page.props.auth.user.name }}
+                        </span>
+
+                        <Link :href="route('dashboard')"
+                            class="bg-[#FFFF00] text-black px-6 py-2 rounded-full text-sm font-semibold hover:bg-[#FFFF33] transition-colors">
+                        Meus eventos
+                        </Link>
+
+                        <!-- Desktop Menu Button -->
+                        <button @click="showingNavigationDropdown = !showingNavigationDropdown"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-900 hover:bg-gray-100 focus:outline-none transition duration-150 ease-in-out">
+                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <path
+                                    :class="{ 'hidden': showingNavigationDropdown, 'inline-flex': !showingNavigationDropdown }"
+                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                                <path
+                                    :class="{ 'hidden': !showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }"
+                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Mobile Navigation -->
+                    <div class="flex md:hidden items-center gap-3">
+                        <Link :href="route('dashboard')"
+                            class="bg-[#FFFF00] text-black px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#FFFF33] transition-colors">
+                        Meus eventos
+                        </Link>
+
+                        <button @click="showingNavigationDropdown = !showingNavigationDropdown"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-900 hover:bg-gray-100 focus:outline-none transition duration-150 ease-in-out">
+                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <path
+                                    :class="{ 'hidden': showingNavigationDropdown, 'inline-flex': !showingNavigationDropdown }"
+                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                                <path
+                                    :class="{ 'hidden': !showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }"
+                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div :class="{ 'block': showingNavigationDropdown, 'hidden': !showingNavigationDropdown }"
+                class="border-t border-gray-200 md:absolute md:right-4 md:top-16 md:w-64 md:bg-white md:rounded-2xl md:shadow-lg md:border md:border-gray-200">
+                <div class="space-y-1 px-4 py-3">
+                    <Link :href="route('dashboard')"
+                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
+                    Dashboard
+                    </Link>
+                    <Link :href="route('dashboard')"
+                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
+                    Meus Eventos
+                    </Link>
+                    <Link :href="route('profile.edit')"
+                        class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
+                    Perfil
+                    </Link>
+                    <Link :href="route('logout')" method="post" as="button"
+                        class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-100">
+                    Sair
                     </Link>
                 </div>
-                <div class="flex items-center">
-                    <Dropdown align="right" width="48">
-                        <template #trigger>
-                            <span class="inline-flex rounded-md">
-                                <button type="button"
-                                    class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-700 transition duration-150 ease-in-out hover:text-gray-900 focus:outline-none">
-                                    {{ $page.props.auth.user.name }}
-                                    <svg class="-me-0.5 ms-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd"
-                                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </span>
-                        </template>
-
-                        <template #content>
-                            <DropdownLink :href="route('profile.edit')">
-                                Perfil
-                            </DropdownLink>
-                            <DropdownLink :href="route('settings.index')">
-                                Configurações
-                            </DropdownLink>
-                            <DropdownLink :href="route('logout')" method="post" as="button">
-                                Sair
-                            </DropdownLink>
-                        </template>
-                    </Dropdown>
-                </div>
-
-                <div class="flex items-center space-x-6">
-                    <NavLink :href="route('events.index')" :active="route().current('events.index')"
-                        class="text-gray-600 hover:text-gray-900 font-medium text-sm">
-                        Meus Eventos
-                    </NavLink>
-                </div>
-
-
             </div>
         </nav>
 
-        <!-- Conteúdo principal com padding para o nav fixo -->
-        <main class="pt-32 pb-8">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <!-- Main content with responsive padding -->
+        <main class="pt-20 pb-8">
+            <div class="mx-auto max-w-[430px] md:max-w-2xl lg:max-w-4xl px-4 sm:px-6 lg:px-8">
                 <slot />
             </div>
         </main>
     </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue';
+<script setup>
+import { ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import { Link } from '@inertiajs/vue3';
 
-const showingNavigationDropdown = ref(false);
+const showingNavigationDropdown = ref(false)
 </script>
