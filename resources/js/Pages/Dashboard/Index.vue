@@ -143,7 +143,7 @@
 
                 <!-- Add New Event Card -->
                 <div class="bg-gray-100 rounded-[32px] h-[200px] flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer"
-                    @click="router.visit(route('events.create'))">
+                    @click="route.visit(route('events.create'))">
                     <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -173,7 +173,7 @@
 
                 <!-- Add New Event Card -->
                 <div class="bg-gray-100 rounded-[32px] h-[200px] flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer"
-                    @click="router.visit(route('events.create'))">
+                    @click="route.visit(route('events.create'))">
                     <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -257,7 +257,7 @@
 <script setup>
 import { ref } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import UpgradeProBanner from '@/Components/UpgradeProBanner.vue'
 
 defineProps({
@@ -291,8 +291,7 @@ const formatEventDate = (dateString) => {
         month: 'long'
     }) + ' às ' + date.toLocaleTimeString('pt-BR', {
         hour: '2-digit',
-        minute: '2-digit'
-    })
+        minute: '2-digit'})
 }
 
 const openDeleteModal = (event) => {
@@ -311,6 +310,7 @@ const deleteEvent = () => {
             onSuccess: () => {
                 showDeleteModal.value = false
                 selectedEvent.value = null
+                router.reload({ only: ['dashboard'] })
             }
         })
     }
@@ -318,7 +318,7 @@ const deleteEvent = () => {
 
 const filterEvents = (filter) => {
     showFilterDropdown.value = false
-    router.get(route('dashboard', { filter }))
+    route.get(route('dashboard', { filter }))
 }
 
 const shareToInstagram = () => {

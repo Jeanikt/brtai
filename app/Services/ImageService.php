@@ -27,13 +27,13 @@ class ImageService
 
             Log::info('Tentando fazer upload para o caminho: ' . $path);
 
-            $uploaded = Storage::disk('supabase')->put(
+            $uploadSuccess = Storage::disk('supabase')->put(
                 $path,
                 file_get_contents($image),
-                'public'
+                ['visibility' => 'public']
             );
 
-            if (!$uploaded) {
+            if (!$uploadSuccess) {
                 throw new \Exception('Falha ao fazer upload - retorno falso do storage');
             }
 
@@ -48,7 +48,8 @@ class ImageService
         } catch (\Exception $e) {
             Log::error('Erro no upload da imagem: ' . $e->getMessage(), [
                 'user_id' => $userId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             throw new \Exception('Falha ao fazer upload da imagem para o Supabase Storage: ' . $e->getMessage());
         }
@@ -65,7 +66,9 @@ class ImageService
             }
 
             if (Storage::disk('supabase')->exists($path)) {
-                return Storage::disk('supabase')->delete($path);
+                $deleted = Storage::disk('supabase')->delete($path);
+                Log::info('Imagem deletada', ['path' => $path, 'deleted' => $deleted]);
+                return $deleted;
             }
 
             Log::warning('Arquivo não encontrado no storage: ' . $path);
@@ -86,27 +89,38 @@ class ImageService
     {
         $timestamp = now()->format('Y-m-d_H-i-s');
         $random = Str::random(8);
-        $extension = $image->getClientOriginalExtension();
+        $extension = strtolower($image->getClientOriginalExtension());
 
-        return "events/{$userId}/banner_{$timestamp}_{$random}.{$extension}";
+        return "{$userId}/banner_{$timestamp}_{$random}.{$extension}";
     }
 
     private function extractPathFromUrl(string $url): ?string
     {
         $baseUrl = config('filesystems.disks.supabase.url');
 
+        Log::info('Extraindo path da URL', [
+            'url' => $url,
+            'base_url' => $baseUrl
+        ]);
+
         if (str_starts_with($url, $baseUrl)) {
-            return str_replace($baseUrl . '/', '', $url);
+            $path = str_replace($baseUrl . '/', '', $url);
+            Log::info('Path extraído (base_url): ' . $path);
+            return $path;
         }
 
         $parsedUrl = parse_url($url);
         $path = $parsedUrl['path'] ?? '';
 
         if (str_contains($path, '/storage/v1/object/public/')) {
-            return str_replace('/storage/v1/object/public/', '', $path);
+            $extractedPath = str_replace('/storage/v1/object/public/' . env('SUPABASE_BUCKET', 'events') . '/', '', $path);
+            Log::info('Path extraído (storage_path): ' . $extractedPath);
+            return $extractedPath;
         }
 
-        return ltrim($path, '/');
+        $cleanedPath = ltrim($path, '/');
+        Log::info('Path extraído (cleaned): ' . $cleanedPath);
+        return $cleanedPath;
     }
 
     public function validateImage(UploadedFile $image): bool
@@ -136,8 +150,16 @@ class ImageService
             $uploaded = Storage::disk('supabase')->put($testPath, $content);
 
             if ($uploaded) {
+                $exists = Storage::disk('supabase')->exists($testPath);
+                $url = $this->getImageUrl($testPath);
+
+                Log::info('Teste de conexão com Supabase', [
+                    'uploaded' => $uploaded,
+                    'exists' => $exists,
+                    'url' => $url
+                ]);
+
                 Storage::disk('supabase')->delete($testPath);
-                Log::info('Teste de conexão com Supabase realizado com sucesso');
                 return true;
             }
 
@@ -146,6 +168,18 @@ class ImageService
         } catch (\Exception $e) {
             Log::error('Teste de conexão com Supabase falhou: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    public function listFiles(string $path = ''): array
+    {
+        try {
+            $files = Storage::disk('supabase')->files($path);
+            Log::info('Arquivos no storage', ['path' => $path, 'files' => $files]);
+            return $files;
+        } catch (\Exception $e) {
+            Log::error('Erro ao listar arquivos: ' . $e->getMessage());
+            return [];
         }
     }
 }

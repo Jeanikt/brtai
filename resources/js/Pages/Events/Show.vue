@@ -13,7 +13,19 @@
 
             <div class="flex justify-between items-start">
                 <h1 class="text-2xl font-bold text-gray-900">Mais Informações</h1>
-                <span class="text-sm text-gray-500">Restam {{ timeRemaining }}</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-500">Restam {{ timeRemaining }}</span>
+
+                    <!-- Botão de Publicar/Despublicar -->
+                    <button v-if="event.status === 'draft'" @click="publishEvent"
+                        class="bg-green-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-green-700 transition-colors">
+                        Publicar Evento
+                    </button>
+                    <button v-else-if="event.status === 'active'" @click="unpublishEvent"
+                        class="bg-yellow-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-yellow-700 transition-colors">
+                        Despublicar Evento
+                    </button>
+                </div>
             </div>
 
             <div class="space-y-4">
@@ -30,9 +42,13 @@
                         </button>
                     </div>
                     <div v-if="event.header_image_url" class="mt-3 rounded-xl overflow-hidden">
-                        <img :src="event.header_image_url" alt="Event" class="w-full h-32 object-cover" />
-                        <p class="text-center text-sm text-gray-600 mt-2">Status: <span class="font-semibold">Aguardando
-                                pagamentos</span></p>
+                        <img :src="event.header_image_url" :alt="event.name" class="w-full h-32 object-cover" />
+                        <p class="text-center text-sm text-gray-600 mt-2">
+                            Status:
+                            <span class="font-semibold" :class="statusClass">
+                                {{ statusText }}
+                            </span>
+                        </p>
                     </div>
                 </div>
 
@@ -55,9 +71,8 @@
                                     </svg>
                                 </button>
                             </div>
-                            <p class="text-3xl font-bold text-gray-900">R$ {{ stats.total_revenue || '30.000' }}</p>
-                            <p class="text-sm text-gray-500 mt-1">{{ stats.pending_payments || 11 }} pagamentos
-                                pendentes</p>
+                            <p class="text-3xl font-bold text-gray-900">R$ {{ stats.total_revenue }}</p>
+                            <p class="text-sm text-gray-500 mt-1">{{ stats.pending_payments }} pagamentos pendentes</p>
                         </div>
                     </div>
                 </div>
@@ -81,10 +96,10 @@
                                     </svg>
                                 </button>
                             </div>
-                            <p class="text-3xl font-bold text-gray-900">{{ stats.confirmed_count || '03' }} / {{
-                                event.max_participants || '14' }}</p>
-                            <p class="text-sm text-gray-500 mt-1">{{ stats.pending_participants || 11 }} Convidados
-                                estão pendentes</p>
+                            <p class="text-3xl font-bold text-gray-900">{{ stats.confirmed_count }} / {{
+                                event.max_participants }}</p>
+                            <p class="text-sm text-gray-500 mt-1">{{ stats.pending_participants }} convidados estão
+                                pendentes</p>
                         </div>
                     </div>
                 </div>
@@ -105,15 +120,28 @@
                         <div v-for="participant in participants" :key="participant.id"
                             class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-gray-200 rounded-full"></div>
-                                <span class="text-gray-700">{{ participant.full_name }}</span>
+                                <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-medium text-gray-600">
+                                        {{ getInitials(participant.full_name) }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-700 block">{{ participant.full_name }}</span>
+                                    <span class="text-xs text-gray-500">{{ participant.email }}</span>
+                                </div>
                             </div>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs px-2 py-1 rounded-full"
+                                    :class="paymentStatusClass(participant.payment_status)">
+                                    {{ paymentStatusText(participant.payment_status) }}
+                                </span>
+                                <button class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div v-if="participants.length === 0" class="text-center py-8 text-gray-500">
                             Nenhum convidado confirmado ainda
@@ -127,7 +155,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 const props = defineProps({
@@ -139,7 +167,7 @@ const props = defineProps({
     stats: {
         type: Object,
         default: () => ({
-            total_revenue: 0,
+            total_revenue: '0,00',
             confirmed_count: 0,
             pending_payments: 0,
             pending_participants: 0
@@ -150,20 +178,98 @@ const props = defineProps({
 const showParticipants = ref(false)
 
 const eventUrl = computed(() => {
-    return `brotai.com.br/eventos/${props.event.slug || 'KD13k9ak9DAK1'}`
+    return `${window.location.origin}/e/${props.event.slug}`
 })
 
 const timeRemaining = computed(() => {
+    if (!props.event.event_date) return 'Data não definida'
+
     const eventDate = new Date(props.event.event_date)
     const now = new Date()
+
+    if (eventDate < now) return 'Evento finalizado'
+
     const diff = eventDate - now
-    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    return `${hours}h${minutes}m`
+
+    if (days > 0) {
+        return `${days}d ${hours}h`
+    }
+    return `${hours}h ${minutes}m`
+})
+
+const statusText = computed(() => {
+    const statusMap = {
+        'draft': 'Rascunho',
+        'active': 'Ativo',
+        'cancelled': 'Cancelado',
+        'completed': 'Finalizado'
+    }
+    return statusMap[props.event.status] || 'Desconhecido'
+})
+
+const statusClass = computed(() => {
+    const classMap = {
+        'draft': 'text-yellow-600',
+        'active': 'text-green-600',
+        'cancelled': 'text-red-600',
+        'completed': 'text-gray-600'
+    }
+    return classMap[props.event.status] || 'text-gray-600'
 })
 
 const copyUrl = () => {
-    navigator.clipboard.writeText(`https://${eventUrl.value}`)
-    alert('Link copiado!')
+    navigator.clipboard.writeText(eventUrl.value)
+    alert('Link copiado para a área de transferência!')
+}
+
+const getInitials = (name) => {
+    return name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .substring(0, 2)
+}
+
+const paymentStatusText = (status) => {
+    const statusMap = {
+        'paid': 'Pago',
+        'pending': 'Pendente',
+        'failed': 'Falhou'
+    }
+    return statusMap[status] || status
+}
+
+const paymentStatusClass = (status) => {
+    const classMap = {
+        'paid': 'bg-green-100 text-green-800',
+        'pending': 'bg-yellow-100 text-yellow-800',
+        'failed': 'bg-red-100 text-red-800'
+    }
+    return classMap[status] || 'bg-gray-100 text-gray-800'
+}
+
+// Funções para publicar/despublicar evento
+const publishEvent = () => {
+    if (confirm('Tem certeza que deseja publicar este evento?')) {
+        router.patch(route('events.publish', props.event.id), {}, {
+            onSuccess: () => {
+                // Opcional: mostrar mensagem de sucesso
+            }
+        })
+    }
+}
+
+const unpublishEvent = () => {
+    if (confirm('Tem certeza que deseja despublicar este evento?')) {
+        router.patch(route('events.unpublish', props.event.id), {}, {
+            onSuccess: () => {
+                // Opcional: mostrar mensagem de sucesso
+            }
+        })
+    }
 }
 </script>

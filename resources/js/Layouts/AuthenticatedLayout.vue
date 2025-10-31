@@ -1,12 +1,12 @@
 <template>
-    <div class="min-h-screen bg-gray-50 font-prompt">
+    <div class="min-h-screen bg-gray-100 font-prompt">
         <!-- Nav with responsive design matching Figma -->
         <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-16">
                     <!-- Logo -->
                     <Link :href="route('dashboard')" class="flex items-center">
-                        <ApplicationLogo fill="black" />
+                    <ApplicationLogo fill="black" />
                     </Link>
 
                     <!-- Desktop Navigation -->
@@ -72,7 +72,7 @@
                         class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
                     Meus Eventos
                     </Link>
-                    <Link :href="route('profile.edit')"
+                    <Link :href="route('settings.index')"
                         class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
                     Perfil
                     </Link>

@@ -28,6 +28,7 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
     ]);
 });
+Route::post('/test-image-upload', [EventController::class, 'testImageUpload'])->middleware('auth');
 
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('google.redirect');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('events', EventController::class);
     Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
+    Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
     Route::get('/events/{event}/analytics', [EventController::class, 'analytics'])->name('events.analytics');
 
     Route::post('/events/{event}/price-tiers', [PriceTierController::class, 'store'])->name('price-tiers.store');
