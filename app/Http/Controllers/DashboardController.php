@@ -17,7 +17,7 @@ class DashboardController extends Controller
             'plan_type' => 'freemium',
         ]);
 
-        $query = Event::with(['confirmedParticipants', 'priceTiers'])
+        $query = Event::with(['confirmedParticipants', 'priceTiers', 'participants'])
             ->where('organizer_id', $profile->id);
 
         if ($request->has('filter') && $request->filter !== 'all') {
@@ -27,7 +27,17 @@ class DashboardController extends Controller
         $events = $query->orderBy('event_date', 'desc')
             ->get()
             ->map(function ($event) {
+                // Calcular preço mais baixo
                 $lowestPrice = $event->priceTiers->min('price') ?? 0;
+
+                // Calcular revenue total (somente participantes pagos)
+                $totalRevenue = $event->confirmedParticipants->sum('payment_amount');
+
+                // Contar participantes confirmados
+                $confirmedCount = $event->confirmedParticipants->count();
+
+                // Contar participantes pendentes
+                $pendingCount = $event->participants()->where('payment_status', 'pending')->count();
 
                 return [
                     'id' => $event->id,
@@ -37,10 +47,12 @@ class DashboardController extends Controller
                     'location' => $event->location,
                     'header_image_url' => $event->header_image_url,
                     'status' => $event->status,
-                    'confirmed_count' => $event->confirmedParticipants->count(),
-                    'total_revenue' => $event->total_revenue,
+                    'confirmed_count' => $confirmedCount,
+                    'pending_count' => $pendingCount,
+                    'total_revenue' => $totalRevenue,
                     'price' => $lowestPrice,
                     'slug' => $event->slug,
+                    'max_participants' => $event->max_participants,
                 ];
             });
 
@@ -48,10 +60,16 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->count();
 
+        // Calcular estatísticas totais
+        $totalRevenue = $events->sum('total_revenue');
+        $totalParticipants = $events->sum('confirmed_count');
+        $totalPending = $events->sum('pending_count');
+
         $stats = [
             'total_events' => $events->count(),
-            'total_revenue' => number_format($events->sum('total_revenue'), 2, ',', '.'),
-            'total_participants' => $events->sum('confirmed_count'),
+            'total_revenue' => number_format($totalRevenue, 2, ',', '.'),
+            'total_participants' => $totalParticipants,
+            'total_pending' => $totalPending,
             'upcoming_events' => $events->where('event_date', '>=', now())->count(),
         ];
 
@@ -77,26 +95,37 @@ class DashboardController extends Controller
             'plan_type' => 'freemium',
         ]);
 
-        $events = Event::with(['analytics', 'confirmedParticipants'])
+        $events = Event::with(['analytics', 'confirmedParticipants', 'participants'])
             ->where('organizer_id', $profile->id)
             ->where('event_date', '>=', now()->subMonths(3))
-            ->get();
+            ->get()
+            ->map(function ($event) {
+                $confirmedCount = $event->confirmedParticipants->count();
+                $totalParticipants = $event->participants->count();
+                $totalRevenue = $event->confirmedParticipants->sum('payment_amount');
 
-        $analyticsData = $events->map(function ($event) {
-            return [
-                'name' => $event->name,
-                'date' => $event->event_date->format('d/m/Y'),
-                'participants' => $event->confirmed_count,
-                'revenue' => (float) $event->total_revenue,
-                'conversion_rate' => (float) $event->conversion_rate,
-            ];
-        });
+                $conversionRate = $totalParticipants > 0
+                    ? ($confirmedCount / $totalParticipants) * 100
+                    : 0;
+
+                return [
+                    'name' => $event->name,
+                    'date' => $event->event_date->format('d/m/Y'),
+                    'participants' => $confirmedCount,
+                    'revenue' => (float) $totalRevenue,
+                    'conversion_rate' => (float) $conversionRate,
+                ];
+            });
+
+        $totalRevenue = $events->sum('revenue');
+        $totalParticipants = $events->sum('participants');
+        $averageConversion = $events->avg('conversion_rate');
 
         return Inertia::render('Dashboard/Analytics', [
-            'analytics' => $analyticsData,
-            'total_revenue' => $events->sum('total_revenue'),
-            'total_participants' => $events->sum('confirmed_count'),
-            'average_conversion' => $events->avg('conversion_rate'),
+            'analytics' => $events,
+            'total_revenue' => $totalRevenue,
+            'total_participants' => $totalParticipants,
+            'average_conversion' => $averageConversion,
         ]);
     }
 }

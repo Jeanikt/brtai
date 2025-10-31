@@ -18,8 +18,12 @@ class EventPublicController extends Controller
             $query->where('is_active', true);
         }, 'organizer'])
             ->where('slug', $slug)
-            ->where('status', 'active')
             ->firstOrFail();
+
+        // Verificar se o evento está ativo ou se é público
+        if ($event->status !== 'active' && !$event->is_public) {
+            abort(404, 'Evento não encontrado.');
+        }
 
         $confirmedCount = Participant::where('event_id', $event->id)
             ->where('payment_status', 'paid')

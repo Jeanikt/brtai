@@ -15,9 +15,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class EventController extends Controller
 {
+    use AuthorizesRequests;
+
     protected $supabaseAuth;
     protected $cacheService;
     protected $imageService;
@@ -119,6 +122,7 @@ class EventController extends Controller
             'status' => 'draft',
             'is_public' => true,
         ];
+
         if (request()->hasFile('header_image')) {
             $headerImage = request()->file('header_image');
 
@@ -164,9 +168,49 @@ class EventController extends Controller
             abort(403, 'Você não tem permissão para visualizar este evento.');
         }
 
-        $eventData = $this->cacheService->getEventDetails($event->id);
+        $confirmedParticipants = $event->confirmedParticipants()->count();
+        $pendingParticipants = $event->participants()->where('payment_status', 'pending')->count();
+        $totalRevenue = $event->confirmedParticipants()->sum('payment_amount');
 
-        return Inertia::render('Events/Show', $eventData);
+        $participants = $event->participants()
+            ->with('priceTier')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($participant) {
+                return [
+                    'id' => $participant->id,
+                    'full_name' => $participant->full_name,
+                    'email' => $participant->email,
+                    'phone' => $participant->phone,
+                    'payment_status' => $participant->payment_status,
+                    'payment_amount' => $participant->payment_amount,
+                    'checked_in_at' => $participant->checked_in_at,
+                    'confirmed_at' => $participant->confirmed_at,
+                ];
+            });
+
+        $stats = [
+            'total_revenue' => number_format($totalRevenue, 2, ',', '.'),
+            'confirmed_count' => $confirmedParticipants,
+            'pending_payments' => $pendingParticipants,
+            'pending_participants' => $pendingParticipants,
+        ];
+
+        return Inertia::render('Events/Show', [
+            'event' => [
+                'id' => $event->id,
+                'name' => $event->name,
+                'slug' => $event->slug,
+                'event_date' => $event->event_date,
+                'location' => $event->location,
+                'header_image_url' => $event->header_image_url,
+                'max_participants' => $event->max_participants,
+                'status' => $event->status,
+                'is_public' => $event->is_public,
+            ],
+            'participants' => $participants,
+            'stats' => $stats,
+        ]);
     }
 
     public function edit(Event $event)
@@ -201,6 +245,7 @@ class EventController extends Controller
                 $validated['max_participants']
             );
         }
+
         if (request()->hasFile('header_image')) {
             $headerImage = request()->file('header_image');
             if ($headerImage && $headerImage->isValid()) {
@@ -274,6 +319,22 @@ class EventController extends Controller
         return redirect()->route('events.show', $event->id)->with('success', 'Evento publicado com sucesso!');
     }
 
+    public function unpublish(Request $request, Event $event)
+    {
+        $profile = $this->getCurrentProfile();
+
+        if ($event->organizer_id !== $profile->id) {
+            abort(403, 'Você não tem permissão para despublicar este evento.');
+        }
+
+        $event->update(['status' => 'draft']);
+
+        $this->cacheService->invalidateEventCaches($event->id);
+        $this->cacheService->invalidateUserCaches($profile->id);
+
+        return redirect()->route('events.show', $event->id)->with('success', 'Evento despublicado com sucesso!');
+    }
+
     public function analytics(Event $event)
     {
         $profile = $this->getCurrentProfile();
@@ -336,5 +397,41 @@ class EventController extends Controller
             'max_quantity' => null,
             'is_active' => true,
         ]);
+    }
+
+    public function testImageUpload(Request $request)
+    {
+        try {
+            $profile = $this->getCurrentProfile();
+
+            Log::info('Testando configuração do storage', [
+                'disk' => config('filesystems.default'),
+                'supabase_url' => config('filesystems.disks.supabase.url'),
+                'bucket' => config('filesystems.disks.supabase.bucket')
+            ]);
+
+            $testFile = $request->file('test_image');
+            if ($testFile) {
+                $url = $this->imageService->uploadEventBanner($testFile, $profile->id);
+
+                return response()->json([
+                    'success' => true,
+                    'url' => $url,
+                    'direct_url' => $url,
+                    'profile_id' => $profile->id
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Nenhuma imagem fornecida'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erro no teste de upload: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

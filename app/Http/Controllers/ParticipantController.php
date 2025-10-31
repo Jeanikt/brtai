@@ -6,9 +6,12 @@ use App\Models\Event;
 use App\Models\Participant;
 use Illuminate\Http\Request;
 use App\Http\Resources\ParticipantResource;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ParticipantController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(Event $event)
     {
         $this->authorize('view', $event);
@@ -48,9 +51,8 @@ class ParticipantController extends Controller
     {
         $this->authorize('delete', $participant->event);
 
-        // Decrement price tier quantity if paid
         if ($participant->isPaid()) {
-            $participant->priceTier->decrementQuantity();
+            $participant->priceTier->decrement('current_quantity');
         }
 
         $participant->delete();
@@ -68,7 +70,7 @@ class ParticipantController extends Controller
             ]);
         }
 
-        $participant->markAsCheckedIn();
+        $participant->update(['checked_in_at' => now()]);
 
         return redirect()->back()->with('success', 'Check-in realizado com sucesso!');
     }
@@ -108,9 +110,7 @@ class ParticipantController extends Controller
 
         fclose($handle);
 
-        return response()->streamDownload(function () use ($handle) {
-            //
-        }, $filename, [
+        return response()->streamDownload(function () use ($handle) {}, $filename, [
             'Content-Type' => 'text/csv',
         ]);
     }

@@ -1,11 +1,9 @@
 <?php
 
 return [
-
     'default' => env('FILESYSTEM_DISK', 'supabase'),
 
     'disks' => [
-
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
@@ -42,7 +40,7 @@ return [
             'secret' => env('SUPABASE_S3_SECRET'),
             'region' => 'us-east-1',
             'bucket' => env('SUPABASE_BUCKET', 'events'),
-            'url' => env('SUPABASE_URL') . '/storage/v1/object/public',
+            'url' => env('SUPABASE_URL') . '/storage/v1/object/public/' . env('SUPABASE_BUCKET', 'events'),
             'endpoint' => env('SUPABASE_ENDPOINT'),
             'use_path_style_endpoint' => true,
             'throw' => false,
@@ -52,11 +50,9 @@ return [
                 'CacheControl' => 'public, max-age=31536000',
             ],
         ],
-
     ],
 
     'links' => [
         public_path('storage') => storage_path('app/public'),
     ],
-
 ];

@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\PriceTier;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PriceTierController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, Event $event)
     {
         $this->authorize('update', $event);
@@ -50,7 +53,6 @@ class PriceTierController extends Controller
     {
         $this->authorize('update', $priceTier->event);
 
-        // Check if there are participants using this price tier
         if ($priceTier->participants()->count() > 0) {
             return redirect()->back()->withErrors([
                 'error' => 'Não é possível excluir um lote que já possui participantes.'
