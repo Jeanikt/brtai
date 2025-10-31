@@ -75,9 +75,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile.update');
-    Route::put('/settings/plan', [SettingsController::class, 'updatePlan'])->name('settings.plan.update');
     Route::get('/settings/billing', [SettingsController::class, 'billing'])->name('settings.billing');
     Route::post('/settings/upgrade-pro', [SettingsController::class, 'upgradeToPro'])->name('settings.upgrade-pro');
+    Route::get('/settings/upgrade-success', [SettingsController::class, 'upgradeSuccess'])->name('settings.upgrade-success');
+    Route::get('/settings/upgrade-status/{transactionId}', [SettingsController::class, 'checkUpgradeStatus'])->name('settings.check-upgrade-status');
 });
 
 Route::middleware('auth')->group(function () {

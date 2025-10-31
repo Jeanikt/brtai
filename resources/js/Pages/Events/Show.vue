@@ -255,7 +255,7 @@ const paymentStatusClass = (status) => {
 // Funções para publicar/despublicar evento
 const publishEvent = () => {
     if (confirm('Tem certeza que deseja publicar este evento?')) {
-        router.patch(route('events.publish', props.event.id), {}, {
+        router.post(route('events.publish', props.event.id), {}, {
             onSuccess: () => {
                 // Opcional: mostrar mensagem de sucesso
             }
@@ -265,7 +265,7 @@ const publishEvent = () => {
 
 const unpublishEvent = () => {
     if (confirm('Tem certeza que deseja despublicar este evento?')) {
-        router.patch(route('events.unpublish', props.event.id), {}, {
+        router.post(route('events.unpublish', props.event.id), {}, {
             onSuccess: () => {
                 // Opcional: mostrar mensagem de sucesso
             }

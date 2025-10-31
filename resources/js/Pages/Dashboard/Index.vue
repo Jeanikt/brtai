@@ -104,7 +104,7 @@
                                 <p>{{ formatEventDate(event.event_date) }}</p>
                                 <p>{{ event.location }}</p>
                                 <p>R$ {{ event.price || '10,00' }} por pessoa</p>
-                                <p>+{{ event.confirmed_count || 4 }} Convidados</p>
+                                <p>+{{ event.confirmed_count || 0}} Convidados</p>
                             </div>
                         </div>
 
