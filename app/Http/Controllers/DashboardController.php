@@ -12,7 +12,6 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Cria o profile caso não exista
         $profile = $user->profile ?? $user->profile()->create([
             'full_name' => $user->name ?? 'Usuário sem nome',
             'plan_type' => 'freemium',
@@ -21,11 +20,28 @@ class DashboardController extends Controller
         $events = Event::with(['confirmedParticipants', 'priceTiers'])
             ->where('organizer_id', $profile->id)
             ->orderBy('event_date', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'description' => $event->description,
+                    'event_date' => $event->event_date,
+                    'location' => $event->location,
+                    'header_image_url' => $event->header_image_url,
+                    'status' => $event->status,
+                    'confirmed_count' => $event->confirmed_count,
+                    'total_revenue' => $event->total_revenue,
+                ];
+            });
+
+        $activeEventsCount = Event::where('organizer_id', $profile->id)
+            ->where('status', 'active')
+            ->count();
 
         $stats = [
             'total_events' => $events->count(),
-            'total_revenue' => $events->sum('total_revenue'),
+            'total_revenue' => number_format($events->sum('total_revenue'), 2, ',', '.'),
             'total_participants' => $events->sum('confirmed_count'),
             'upcoming_events' => $events->where('event_date', '>=', now())->count(),
         ];
@@ -37,6 +53,7 @@ class DashboardController extends Controller
                 'type' => $profile->plan_type,
                 'event_limit' => $profile->getEventLimit(),
                 'participant_limit' => $profile->getParticipantLimit(),
+                'active_events_count' => $activeEventsCount,
             ]
         ]);
     }
@@ -45,7 +62,6 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Garante que o profile exista
         $profile = $user->profile ?? $user->profile()->create([
             'full_name' => $user->name ?? 'Usuário sem nome',
             'plan_type' => 'freemium',
