@@ -1,61 +1,60 @@
-# -----------------------------
-# Etapa 1: Build do frontend (Vite + Vue 3 / Inertia)
-# -----------------------------
+# ============================
+# Etapa 1 - Build do Frontend
+# ============================
 FROM node:20 AS build-frontend
+
+# Definir diretório de trabalho
 WORKDIR /app
 
-# Instalar dependências do frontend
+# Copiar apenas os arquivos necessários para instalar dependências
 COPY package*.json ./
-RUN npm install
 
-# Copiar todo o código e gerar o build de produção
+# Atualizar o npm para evitar bugs de resolução de dependências
+RUN npm install -g npm@latest
+
+# Instalar dependências do frontend (ignorando conflitos)
+RUN npm install --legacy-peer-deps
+
+# Copiar todo o código para o container
 COPY . .
+
+# Gerar build de produção do Vue (Vite)
 RUN npm run build
 
 
-# -----------------------------
-# Etapa 2: Backend (Laravel 12 + PHP 8.3)
-# -----------------------------
+# ============================
+# Etapa 2 - Backend PHP (Laravel)
+# ============================
 FROM php:8.3-fpm
 
-# Instalar dependências do sistema
+# Instalar dependências do sistema e extensões PHP necessárias
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev libpq-dev \
-    && docker-php-ext-install pdo_pgsql pdo_mysql mbstring exif pcntl bcmath gd zip
+    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Instalar Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Criar diretório da aplicação
+# Criar diretório de trabalho
 WORKDIR /var/www/html
 
-# Copiar código da aplicação
+# Copiar arquivos do Laravel (exceto node_modules, vendor, etc.)
 COPY . .
 
-# Copiar o build do frontend
+# Copiar build do frontend da etapa anterior
 COPY --from=build-frontend /app/public ./public
 
-# Instalar dependências do Laravel em modo produção
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Instalar dependências do Laravel
+RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# Otimizações do framework
-RUN php artisan config:clear \
-    && php artisan route:clear \
-    && php artisan view:clear \
-    && php artisan optimize
+# Gerar cache de configuração
+RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
 
-# Ajustar permissões
-RUN chown -R www-data:www-data storage bootstrap/cache
+# Permitir escrita em storage e bootstrap
+RUN chmod -R 775 storage bootstrap/cache
 
-# Variáveis padrão (Render substitui via painel)
-ENV APP_ENV=production
-ENV APP_DEBUG=false
-ENV APP_URL=https://your-app.onrender.com
-ENV REDIS_CLIENT=predis
-ENV REDIS_PORT=6379
+# Expor a porta padrão do Laravel
+EXPOSE 8000
 
-# Expor a porta usada pelo Render
-EXPOSE 10000
-
-# Comando de inicialização
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=10000
+# Comando padrão de execução
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
