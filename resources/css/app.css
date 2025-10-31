@@ -31,3 +31,23 @@ header {
     transition-duration: 200ms;
     transition-timing-function: ease-in-out;
 }
+
+/* Melhorias para a experiência mobile */
+@media (max-width: 640px) {
+    .min-h-screen {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+}
+
+/* Melhorar a aparência dos inputs */
+input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 168, 89, 0.1);
+}

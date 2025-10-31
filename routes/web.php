@@ -9,6 +9,7 @@ use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\AIController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SupplierController;
@@ -25,10 +26,11 @@ Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
     ]);
 });
+
+Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('google.redirect');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
 
 Route::get('/e/{event:slug}', [EventPublicController::class, 'show'])->name('events.public.show');
 Route::post('/e/{event:slug}/participate', [EventPublicController::class, 'participate'])->name('events.public.participate');

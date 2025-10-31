@@ -30,21 +30,14 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * Relação 1:1 com Profile (mesmo ID)
-     */
     public function profile()
     {
         return $this->hasOne(Profile::class, 'id', 'id');
     }
 
-    /**
-     * Cria automaticamente um Profile ao criar o usuário
-     */
     protected static function booted(): void
     {
         static::created(function (self $user) {
-            // Evita duplicação se o perfil já existir
             if (!$user->profile()->exists()) {
                 $user->profile()->create([
                     'full_name' => $user->name ?? 'Usuário sem nome',

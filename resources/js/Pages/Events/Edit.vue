@@ -6,75 +6,39 @@
         </div>
 
         <form @submit.prevent="submit" class="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-            <ImageUpload
-                v-model="form.header_image"
-                label="Banner do Evento"
-                class="mb-6"
-                :error="form.errors.header_image"
-                :existing-image="event.header_image_url"
-            />
+            <ImageUpload v-model="form.header_image" label="Banner do Evento" class="mb-6"
+                :error="form.errors.header_image" :existing-image="event.header_image_url" />
 
             <div class="grid md:grid-cols-2 gap-6 mb-6">
-                <FormInput
-                    label="Nome do Evento *"
-                    v-model="form.name"
-                    type="text"
-                    required
-                    placeholder="Ex: Resenha de Halloween"
-                    :error="form.errors.name"
-                />
+                <FormInput label="Nome do Evento *" v-model="form.name" type="text" required
+                    placeholder="Ex: Resenha de Halloween" :error="form.errors.name" />
 
-                <FormInput
-                    label="Data e Hora *"
-                    v-model="form.event_date"
-                    type="datetime-local"
-                    required
-                    :error="form.errors.event_date"
-                />
+                <FormInput label="Data e Hora *" v-model="form.event_date" type="datetime-local" required
+                    :error="form.errors.event_date" />
             </div>
 
-            <FormInput
-                label="Localização *"
-                v-model="form.location"
-                type="text"
-                required
-                placeholder="Ex: Av. Paulista, 1000 - São Paulo"
-                :error="form.errors.location"
-                class="mb-6"
-            />
+            <FormInput label="Localização *" v-model="form.location" type="text" required
+                placeholder="Ex: Av. Paulista, 1000 - São Paulo" :error="form.errors.location" class="mb-6" />
 
-            <FormTextarea
-                label="Descrição do Evento"
-                v-model="form.description"
-                rows="3"
-                placeholder="Descreva seu evento... (Open bar, DJ, etc.)"
-                :error="form.errors.description"
-                class="mb-6"
-            />
+            <FormTextarea label="Descrição do Evento" v-model="form.description" rows="3"
+                placeholder="Descreva seu evento... (Open bar, DJ, etc.)" :error="form.errors.description"
+                class="mb-6" />
 
             <div class="grid md:grid-cols-2 gap-6 mb-8">
-                <FormInput
-                    label="Limite de Participantes"
-                    v-model="form.max_participants"
-                    type="number"
-                    :placeholder="maxParticipantsPlaceholder"
-                    :error="form.errors.max_participants"
-                />
+                <FormInput label="Limite de Participantes" v-model="form.max_participants" type="number"
+                    :placeholder="maxParticipantsPlaceholder" :error="form.errors.max_participants" />
 
-                <FormCheckbox
-                    label="Revelar localização apenas após pagamento"
-                    v-model="form.location_reveal_after_payment"
-                />
+                <FormCheckbox label="Revelar localização apenas após pagamento"
+                    v-model="form.location_reveal_after_payment" />
             </div>
 
             <div class="flex justify-end space-x-4">
                 <Link :href="route('events.show', event.id)"
                     class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
-                    Cancelar
+                Cancelar
                 </Link>
-                <button type="submit"
-                        :disabled="form.processing"
-                        class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50">
+                <button type="submit" :disabled="form.processing"
+                    class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50">
                     {{ form.processing ? 'Atualizando...' : 'Atualizar Evento' }}
                 </button>
             </div>
@@ -85,10 +49,10 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
-import FormInput from '@/Components/FormInput.vue'
-import FormTextarea from '@/Components/FormTextarea.vue'
-import FormCheckbox from '@/Components/FormCheckbox.vue'
-import ImageUpload from '@/Components/ImageUpload.vue'
+import FormInput from '@/Components/Forms/FormInput.vue'
+import FormTextarea from '@/Components/Forms/FormTextarea.vue'
+import FormCheckbox from '@/Components/Forms/FormCheckbox.vue'
+import ImageUpload from '@/Components/Image/ImageUpload.vue'
 
 const props = defineProps({
     event: Object,
