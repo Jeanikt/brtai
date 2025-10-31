@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Participant;
 use App\Models\PaymentTransaction;
 use App\Models\WebhookLog;
+use App\Models\User;
+use App\Models\Profile;
 use Illuminate\Http\Request;
 
 class WebhookController extends Controller
@@ -55,11 +57,74 @@ class WebhookController extends Controller
         $transactionId = $paymentData['id'] ?? null;
         $status = $paymentData['status'] ?? null;
         $amount = $paymentData['amount'] ?? null;
+        $metadata = $paymentData['metadata'] ?? [];
 
         if (!$transactionId || $status !== 'completed') {
             return;
         }
 
+        // Verificar se é upgrade de plano
+        if (isset($metadata['plan_type']) && $metadata['plan_type'] === 'pro') {
+            $this->handlePlanUpgrade($transactionId, $paymentData, $metadata);
+        } else {
+            // É pagamento de participante normal
+            $this->handleParticipantPayment($transactionId, $paymentData);
+        }
+    }
+
+    private function handlePlanUpgrade($transactionId, $paymentData, $metadata)
+    {
+        $userId = $metadata['user_id'] ?? null;
+
+        if (!$userId) {
+            return;
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            return;
+        }
+
+        // Atualizar plano para Pro
+        $user->profile->update([
+            'plan_type' => 'pro',
+            'subscription_id' => $transactionId
+        ]);
+
+        // Atualizar ou criar transação
+        $transaction = PaymentTransaction::where('gateway_transaction_id', $transactionId)->first();
+
+        if ($transaction) {
+            $transaction->update([
+                'status' => 'completed',
+                'gateway_response' => $paymentData,
+                'processed_at' => now(),
+                'fee_amount' => $this->calculateUpgradeFee($paymentData['amount'] / 100),
+                'net_amount' => ($paymentData['amount'] / 100) - $this->calculateUpgradeFee($paymentData['amount'] / 100)
+            ]);
+        } else {
+            PaymentTransaction::create([
+                'participant_id' => null,
+                'event_id' => null,
+                'amount' => $paymentData['amount'] / 100,
+                'status' => 'completed',
+                'gateway' => 'abacate_pay',
+                'gateway_transaction_id' => $transactionId,
+                'gateway_response' => $paymentData,
+                'fee_amount' => $this->calculateUpgradeFee($paymentData['amount'] / 100),
+                'net_amount' => ($paymentData['amount'] / 100) - $this->calculateUpgradeFee($paymentData['amount'] / 100),
+                'metadata' => [
+                    'type' => 'plan_upgrade',
+                    'user_id' => $userId,
+                    'plan' => 'pro'
+                ],
+                'processed_at' => now(),
+            ]);
+        }
+    }
+
+    private function handleParticipantPayment($transactionId, $paymentData)
+    {
         $participant = Participant::where('transaction_id', $transactionId)->first();
 
         if (!$participant) {
@@ -75,13 +140,13 @@ class WebhookController extends Controller
             PaymentTransaction::create([
                 'participant_id' => $participant->id,
                 'event_id' => $participant->event_id,
-                'amount' => $amount / 100,
+                'amount' => $paymentData['amount'] / 100,
                 'status' => 'completed',
                 'gateway' => 'abacate_pay',
                 'gateway_transaction_id' => $transactionId,
                 'gateway_response' => $paymentData,
-                'fee_amount' => $this->calculateFee($amount / 100, $participant),
-                'net_amount' => ($amount / 100) - $this->calculateFee($amount / 100, $participant),
+                'fee_amount' => $this->calculateFee($paymentData['amount'] / 100, $participant),
+                'net_amount' => ($paymentData['amount'] / 100) - $this->calculateFee($paymentData['amount'] / 100, $participant),
                 'processed_at' => now(),
             ]);
         }
@@ -91,6 +156,15 @@ class WebhookController extends Controller
     {
         $organizer = $participant->event->organizer;
         $feePercentage = $organizer->plan_type === 'pro' ? 0.055 : 0.065;
+        $fixedFee = 0.80;
+
+        return ($amount * $feePercentage) + $fixedFee;
+    }
+
+    private function calculateUpgradeFee($amount)
+    {
+        // Taxa fixa para upgrades de plano
+        $feePercentage = 0.055; // 5.5%
         $fixedFee = 0.80;
 
         return ($amount * $feePercentage) + $fixedFee;

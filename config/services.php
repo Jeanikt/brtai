@@ -30,4 +30,9 @@ return [
             'verify' => env('GUZZLE_VERIFY', true),
         ],
     ],
+    'abacatepay' => [
+        'key' => env('ABACATEPAY_API_KEY', 'abc_dev_2zd5G3HnxkPTxcPs3qd56Kkz'),
+        'url' => env('ABACATEPAY_BASE_URL', 'https://api.abacatepay.com/v1'),
+        'webhook_secret' => env('ABACATEPAY_WEBHOOK_SECRET', 'webh_dev_24Kzwr0q6YCHGzkDUeGAQ6JL'),
+    ],
 ];
