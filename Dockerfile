@@ -1,77 +1,61 @@
-# ============================
-# Etapa 1 — Dependências PHP (Ziggy)
-# ============================
-FROM composer:2 AS ziggy
-WORKDIR /app
+# Etapa 1: imagem base PHP
+FROM php:8.3-fpm AS base
 
-# Copia composer.json e composer.lock
-COPY composer.json composer.lock ./
+# Instalar dependências do sistema
+RUN apt-get update && apt-get install -y \
+    git curl zip unzip libpq-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
+    libonig-dev libxml2-dev libssl-dev libicu-dev g++ \
+    && docker-php-ext-install pdo pdo_mysql bcmath zip intl opcache \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd
 
-# Garante compatibilidade entre composer.json e composer.lock
-# Se o lock estiver desatualizado, faz update automático
-RUN composer validate --no-check-all \
-    && composer install --no-dev --no-scripts --prefer-dist --no-interaction \
-    || (echo "composer.lock desatualizado — atualizando..." && composer update --no-dev --no-scripts --prefer-dist --no-interaction)
-
-
-# ============================
-# Etapa 2 — Build do Frontend (Vite)
-# ============================
-FROM node:22-alpine AS build
-WORKDIR /app
-
-# Copia apenas arquivos essenciais
-COPY package*.json ./
-
-# Instala dependências Node
-RUN npm ci --legacy-peer-deps
-
-# Copia todo o projeto
-COPY . .
-
-# Copia vendor da etapa anterior (para Ziggy)
-COPY --from=ziggy /app/vendor ./vendor
-
-# Gera build de produção (Vite)
-RUN npm run build
-
-
-# ============================
-# Etapa 3 — Produção (PHP-FPM + Laravel)
-# ============================
-FROM php:8.3-fpm-alpine
-
-# Define o diretório de trabalho
-WORKDIR /var/www/html
-
-# Instala dependências do sistema e extensões PHP necessárias
-RUN apk add --no-cache \
-    git zip unzip curl bash supervisor nodejs npm postgresql-dev \
-    libpng-dev oniguruma-dev libxml2-dev icu-dev \
-    && docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd intl
-
-# Copia o Composer da imagem oficial
+# Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copia os arquivos da aplicação
+# Definir diretório de trabalho
+WORKDIR /var/www/html
+
+# Copiar arquivos da aplicação (apenas composer.* para cache eficiente)
+COPY composer.json composer.lock ./
+
+# Instalar dependências PHP (sem dev inicialmente)
+RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction --no-progress \
+    || composer update --no-dev --no-scripts --prefer-dist --no-interaction --no-progress
+
+# Copiar restante do código-fonte
 COPY . .
 
-# Copia build do frontend
-COPY --from=build /app/public/build ./public/build
+# Rodar scripts do Laravel
+RUN composer dump-autoload --optimize \
+    && php artisan package:discover --ansi
 
-# Instala dependências PHP otimizadas
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+# Permissões para o storage e bootstrap
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Ajusta permissões
-RUN chown -R www-data:www-data storage bootstrap/cache public/build \
-    && chmod -R 775 storage bootstrap/cache public/build
+# ------------------------------------------------
+# Etapa 2: Node.js para build de assets (Vite)
+# ------------------------------------------------
+FROM node:20-alpine AS frontend
 
-# Copia e configura script de inicialização
-COPY ./docker-start.sh /var/www/html/start.sh
-RUN chmod +x /var/www/html/start.sh
+WORKDIR /app
 
-# Porta do PHP-FPM
+COPY package*.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY . .
+RUN npm run build
+
+# ------------------------------------------------
+# Etapa 3: Container final
+# ------------------------------------------------
+FROM base AS final
+
+WORKDIR /var/www/html
+
+# Copiar build do front-end
+COPY --from=frontend /app/public/build ./public/build
+
 EXPOSE 9000
 
-# Comando de inicialização
-CMD ["/bin/sh", "/var/www/html/start.sh"]
+CMD ["php-fpm"]
