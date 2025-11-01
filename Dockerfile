@@ -6,10 +6,10 @@ FROM node:20 AS build-frontend
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de dependências do Node
+# Copia arquivos de dependências do Node
 COPY package*.json ./
 
-# Atualiza o npm e instala dependências (com compatibilidade)
+# Atualiza o npm e instala dependências (mantendo compatibilidade)
 RUN npm install -g npm@latest
 RUN npm install --legacy-peer-deps
 
@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y \
     git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Instala o Composer
+# Instala o Composer globalmente
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Define o diretório de trabalho
@@ -48,6 +48,14 @@ COPY --from=build-frontend /app/public ./public
 
 # Instala dependências PHP sem dev
 RUN composer install --no-dev --no-interaction --optimize-autoloader
+
+# Gera APP_KEY se estiver vazia
+RUN php -r "if (!getenv('APP_KEY') || getenv('APP_KEY') === '') { \
+    echo \"Gerando APP_KEY automaticamente...\n\"; \
+    passthru('php artisan key:generate --force'); \
+} else { \
+    echo \"APP_KEY já definida, pulando geração...\n\"; \
+}"
 
 # Cacheia configurações e rotas
 RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
