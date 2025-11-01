@@ -4,10 +4,10 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Instala PHP 8.3 + extensões mínimas + Composer (necessário pro Ziggy)
+# Instala PHP + Composer (para gerar rotas Ziggy)
 RUN apk add --no-cache \
-    php83 php83-cli php83-mbstring php83-dom php83-tokenizer php83-simplexml php83-fileinfo curl git \
-    && curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
+    php php-cli php-mbstring php-dom php-tokenizer php-simplexml php-fileinfo curl git \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Copia arquivos necessários
 COPY package*.json composer.json composer.lock ./
