@@ -1,61 +1,59 @@
-# Etapa 1: imagem base PHP
+# ------------------------------------------------
+# Etapa base: PHP com extensões necessárias
+# ------------------------------------------------
 FROM php:8.3-fpm AS base
 
-# Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
     git curl zip unzip libpq-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
     libonig-dev libxml2-dev libssl-dev libicu-dev g++ \
     && docker-php-ext-install pdo pdo_mysql bcmath zip intl opcache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd
+    && docker-php-ext-install gd \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar Composer
+# Instala Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Definir diretório de trabalho
 WORKDIR /var/www/html
 
-# Copiar arquivos da aplicação (apenas composer.* para cache eficiente)
-COPY composer.json composer.lock ./
-
-# Instalar dependências PHP (sem dev inicialmente)
-RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction --no-progress \
-    || composer update --no-dev --no-scripts --prefer-dist --no-interaction --no-progress
-
-# Copiar restante do código-fonte
-COPY . .
-
-# Rodar scripts do Laravel
-RUN composer dump-autoload --optimize \
-    && php artisan package:discover --ansi
-
-# Permissões para o storage e bootstrap
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
-
 # ------------------------------------------------
-# Etapa 2: Node.js para build de assets (Vite)
+# Etapa frontend: build do Vite
 # ------------------------------------------------
-FROM node:20-alpine AS frontend
+FROM node:20 AS frontend
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+# Copia apenas o que é necessário para o build do Vite
+COPY package*.json vite.config.* ./
+COPY resources ./resources
+COPY tsconfig*.json ./
 
-COPY . .
+# Copia vendor (necessário para Ziggy)
+COPY vendor ./vendor
+COPY artisan ./
+
+# Instala dependências e faz o build
+RUN npm install
 RUN npm run build
 
 # ------------------------------------------------
-# Etapa 3: Container final
+# Etapa final: aplicação pronta
 # ------------------------------------------------
-FROM base AS final
+FROM base AS production
 
 WORKDIR /var/www/html
 
-# Copiar build do front-end
+# Copia arquivos da aplicação
+COPY . .
+
+# Copia o build do frontend
 COPY --from=frontend /app/public/build ./public/build
 
-EXPOSE 9000
+# Instala dependências PHP
+RUN composer install --no-dev --optimize-autoloader
 
+# Define permissões
+RUN chown -R www-data:www-data storage bootstrap/cache
+
+EXPOSE 9000
 CMD ["php-fpm"]
