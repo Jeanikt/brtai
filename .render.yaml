@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: brtai
+    runtime: docker
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: LOG_CHANNEL
+        value: stderr
+    buildCommand: ""
+    startCommand: /usr/local/bin/docker-start.sh
+    healthCheckPath: /
