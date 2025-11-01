@@ -19,7 +19,7 @@ sed -i "s|VITE_APP_NAME=.*|VITE_APP_NAME=\"BRTai\"|g" .env
 
 if [ ! -f public/build/manifest.json ]; then
     echo "⚠️  Assets do Vite não encontrados. Executando build..."
-    npm ci --legacy-peer-deps
+    npm install --legacy-peer-deps
     npm run build
 fi
 

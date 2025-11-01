@@ -10,14 +10,14 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-FROM node:20.19-alpine AS build-frontend
+FROM node:20-alpine AS build-frontend
 
 WORKDIR /app
 
 COPY package*.json vite.config.js tailwind.config.js postcss.config.js tsconfig.json ./
 COPY resources ./resources
 
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 RUN npm run build
 
 FROM php:8.3.13-fpm-alpine
