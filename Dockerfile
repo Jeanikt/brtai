@@ -30,22 +30,21 @@ RUN apk add --no-cache \
     libpng \
     libjpeg-turbo \
     libzip \
-    libpq \
-    nodejs=20.19.1-r0 \
-    npm=10.9.1-r0 \
-    \
-    && apk add --no-cache --virtual .build-deps \
+    libpq
+
+RUN apk add --no-cache --virtual .build-deps \
     libpng-dev \
     libjpeg-turbo-dev \
     libzip-dev \
     oniguruma-dev \
-    postgresql-dev \
-    \
-    && docker-php-ext-configure gd --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif \
-    \
-    && apk del --purge .build-deps \
-    && rm -rf /var/cache/apk/* /tmp/*
+    postgresql-dev
+
+RUN docker-php-ext-configure gd --with-jpeg
+RUN docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif
+RUN apk del --purge .build-deps
+RUN rm -rf /var/cache/apk/* /tmp/*
+
+RUN apk add --no-cache nodejs npm
 
 COPY etc/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
