@@ -1,77 +1,58 @@
-# ===============================================================
-# 🧱 Etapa base: PHP com extensões essenciais
-# ===============================================================
-FROM php:8.2-fpm AS base
-
-# Instala dependências de sistema e extensões PHP necessárias
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpq-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
-    libonig-dev libxml2-dev libssl-dev libicu-dev g++ \
-    && docker-php-ext-install pdo pdo_mysql bcmath zip intl opcache \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd
-
-# Instala Composer globalmente
-RUN curl -sS https://getcomposer.org/installer | php \
-    && mv composer.phar /usr/local/bin/composer
+# ==========================
+# 🐘 Etapa 1: Backend (Laravel + Composer)
+# ==========================
+FROM php:8.2-fpm AS backend
 
 WORKDIR /var/www/html
 
+# Instala dependências de sistema
+RUN apt-get update && apt-get install -y \
+    git curl unzip zip libpng-dev libjpeg-dev libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd pdo pdo_mysql \
+    && rm -rf /var/lib/apt/lists/*
 
-# ===============================================================
-# 🧰 Etapa frontend: build do Vite + Ziggy
-# ===============================================================
-FROM node:20 AS frontend
+# Copia Composer da imagem oficial
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copia os arquivos do Laravel
+COPY . .
+
+# Instala dependências PHP (inclui Ziggy)
+RUN composer install --no-dev --no-interaction --prefer-dist
+
+# ==========================
+# 🧱 Etapa 2: Frontend (Vite)
+# ==========================
+FROM node:20-bookworm AS frontend
 
 WORKDIR /app
 
-# Copia os arquivos necessários para instalar dependências
-COPY package*.json vite.config.* ./
-COPY tsconfig*.json ./
-COPY resources ./resources
-COPY composer.json composer.lock ./
-COPY artisan ./
+# Copia o projeto completo (já vem com /vendor do estágio anterior)
+COPY --from=backend /var/www/html /app
 
-# Instala Composer (para gerar rotas do Ziggy)
-RUN apt-get update && apt-get install -y curl git unzip \
-    && curl -sS https://getcomposer.org/installer | php \
-    && mv composer.phar /usr/local/bin/composer
-
-# Instala dependências PHP (para Ziggy) e JS
-RUN composer install --no-dev --no-interaction --prefer-dist
+# Instala dependências do Node
 RUN npm install
 
-# Build do Vite
+# Gera build de produção do Vite
 RUN npm run build
 
-
-# ===============================================================
-# 🧩 Etapa final: imagem leve pronta para produção
-# ===============================================================
-FROM base AS production
+# ==========================
+# 🧩 Etapa 3: Produção final
+# ==========================
+FROM php:8.2-fpm AS production
 
 WORKDIR /var/www/html
 
-# Copia o backend Laravel
-COPY . .
+# Copia tudo do backend (Laravel completo)
+COPY --from=backend /var/www/html ./
 
-# Copia o build frontend gerado
+# Copia o build do frontend
 COPY --from=frontend /app/public/build ./public/build
 
-# Copia dependências PHP (vendor)
-COPY --from=frontend /app/vendor ./vendor
+# Permissões
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Ajusta permissões
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
-
-# Define variáveis de ambiente padrão
-ENV APP_ENV=production
-ENV APP_DEBUG=false
-ENV APP_KEY=base64:B0Rn6M7dRH6PdG3O4btbhK0uHQb2tyzdPWC8xj4E/qY=
-
-# Porta de exposição
 EXPOSE 9000
 
-# Comando de inicialização do PHP-FPM
 CMD ["php-fpm"]
