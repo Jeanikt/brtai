@@ -56,8 +56,11 @@
 
                     <div class="flex justify-end">
                         <button type="submit" :disabled="form.processing"
-                            class="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            <img v-if="!form.processing" src="/svg-icons/seta.svg" alt="seta" class="w-10 h-10" />
+                            class="w-12 h-12 bg-[#00A859] rounded-full flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105">
+                            <img v-if="!form.processing" :src="setaSvg" alt="Enviar" class="w-6 h-6" />
+                            <div v-else
+                                class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin">
+                            </div>
                         </button>
                     </div>
                 </form>
@@ -108,6 +111,9 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import NavGlass from '@/Components/Nav/NavGlass.vue';
+
+// Importe o SVG como módulo
+import setaSvg from '@/images/svg-icons/seta.svg';
 
 const form = useForm({
     name: '',

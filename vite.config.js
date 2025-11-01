@@ -5,7 +5,7 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
     plugins: [
         laravel({
-            input: ["resources/css/app.css", "resources/js/app.ts"],
+            input: "resources/js/app.ts",
             refresh: true,
         }),
         vue({
@@ -17,13 +17,4 @@ export default defineConfig({
             },
         }),
     ],
-    build: {
-        manifest: true,
-        outDir: "public/build",
-        emptyOutDir: true,
-    },
-    server: {
-        host: "0.0.0.0",
-        port: 5173,
-    },
 });

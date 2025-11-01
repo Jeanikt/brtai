@@ -41,8 +41,11 @@
 
                     <div class="flex justify-end">
                         <button type="submit" :disabled="form.processing"
-                            class="w-12 h-12 rounded-full flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            <img v-if="!form.processing" src="/svg-icons/seta.svg" alt="seta" class="w-10 h-10" />
+                            class="w-12 h-12 bg-[#00A859] rounded-full flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105">
+                            <img v-if="!form.processing" :src="setaSvg" alt="Entrar" class="w-6 h-6" />
+                            <div v-else
+                                class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin">
+                            </div>
                         </button>
                     </div>
                 </form>
@@ -82,7 +85,7 @@
             <div class="text-center">
                 <Link :href="route('password.request')"
                     class="text-sm text-gray-200 hover:text-gray-300 transition-colors duration-200">
-                Obter ajuda para fazer <span class="underline text-white font-semibold">logon</span>
+                Obter ajuda para fazer <span class="underline text-white font-semibold">login</span>
                 </Link>
             </div>
 
@@ -97,6 +100,9 @@
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import NavGlass from '@/Components/Nav/NavGlass.vue'
+
+// Importe o SVG como módulo
+import setaSvg from '@/images/svg-icons/seta.svg'
 
 defineProps<{
     canResetPassword?: boolean
