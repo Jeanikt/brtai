@@ -1,45 +1,47 @@
 # ============================
-# Etapa 1 — Build do Frontend
+# Etapa 1 — Dependências PHP (Ziggy)
 # ============================
 FROM composer:2 AS ziggy
 WORKDIR /app
 
-# Copia arquivos necessários do Laravel para instalar o Ziggy
+# Copia composer.json e composer.lock
 COPY composer.json composer.lock ./
 
-# Instala dependências PHP mínimas (apenas para Ziggy)
-RUN composer install --no-dev --no-scripts --prefer-dist
+# Garante compatibilidade entre composer.json e composer.lock
+# Se o lock estiver desatualizado, faz update automático
+RUN composer validate --no-check-all \
+    && composer install --no-dev --no-scripts --prefer-dist --no-interaction \
+    || (echo "composer.lock desatualizado — atualizando..." && composer update --no-dev --no-scripts --prefer-dist --no-interaction)
 
 
 # ============================
-# Etapa 2 — Build do Frontend (Node + Vite)
+# Etapa 2 — Build do Frontend (Vite)
 # ============================
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copia apenas os arquivos necessários para instalar dependências
+# Copia apenas arquivos essenciais
 COPY package*.json ./
 
 # Instala dependências Node
 RUN npm ci --legacy-peer-deps
 
-# Copia o restante do código
+# Copia todo o projeto
 COPY . .
 
-# Copia a pasta vendor do estágio anterior (para Ziggy)
+# Copia vendor da etapa anterior (para Ziggy)
 COPY --from=ziggy /app/vendor ./vendor
 
-# Faz o build do frontend (Vite)
+# Gera build de produção (Vite)
 RUN npm run build
 
 
-
 # ============================
-# Etapa 3 — PHP-FPM (Produção)
+# Etapa 3 — Produção (PHP-FPM + Laravel)
 # ============================
 FROM php:8.3-fpm-alpine
 
-# Define diretório de trabalho
+# Define o diretório de trabalho
 WORKDIR /var/www/html
 
 # Instala dependências do sistema e extensões PHP necessárias
@@ -48,13 +50,13 @@ RUN apk add --no-cache \
     libpng-dev oniguruma-dev libxml2-dev icu-dev \
     && docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd intl
 
-# Copia o Composer do container oficial
+# Copia o Composer da imagem oficial
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copia o código Laravel
+# Copia os arquivos da aplicação
 COPY . .
 
-# Copia o build do frontend (gerado na etapa anterior)
+# Copia build do frontend
 COPY --from=build /app/public/build ./public/build
 
 # Instala dependências PHP otimizadas
@@ -64,11 +66,11 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-di
 RUN chown -R www-data:www-data storage bootstrap/cache public/build \
     && chmod -R 775 storage bootstrap/cache public/build
 
-# Copia e dá permissão ao script de inicialização
+# Copia e configura script de inicialização
 COPY ./docker-start.sh /var/www/html/start.sh
 RUN chmod +x /var/www/html/start.sh
 
-# Expõe a porta padrão do PHP-FPM
+# Porta do PHP-FPM
 EXPOSE 9000
 
 # Comando de inicialização
