@@ -2,9 +2,9 @@
 set -e
 
 cd /var/www/html
-echo "=== Iniciando Laravel no Render ==="
+echo "=== 🚀 Iniciando Laravel no Render ==="
 
-# Copia .env se não existir
+# Cria .env se não existir
 if [ ! -f .env ]; then
     cp .env.example .env
     chmod 644 .env
@@ -15,35 +15,36 @@ if ! grep -q "APP_KEY=base64:" .env; then
     php artisan key:generate --force
 fi
 
-# Atualiza variáveis
-sed -i "s|APP_URL=.*|APP_URL=https://brotai.com.br|g" .env
-sed -i "s|VITE_APP_NAME=.*|VITE_APP_NAME=\"BRTai\"|g" .env
-
-# Garante que o manifest existe
-if [ ! -f public/build/manifest.json ]; then
-    echo "⚠️ Assets não encontrados. Executando build..."
-    npm ci --legacy-peer-deps
-    npm run build
+# Atualiza variáveis se existirem no arquivo
+if grep -q "APP_URL=" .env; then
+    sed -i "s|APP_URL=.*|APP_URL=https://brotai.com.br|g" .env
+else
+    echo "APP_URL=https://brotai.com.br" >> .env
 fi
 
-# Verificação final
+if grep -q "VITE_APP_NAME=" .env; then
+    sed -i "s|VITE_APP_NAME=.*|VITE_APP_NAME=\"BRTai\"|g" .env
+else
+    echo "VITE_APP_NAME=\"BRTai\"" >> .env
+fi
+
+# Verifica se o manifest existe (não deve precisar buildar no container)
 if [ ! -f public/build/manifest.json ]; then
-    echo "❌ ERRO: manifest.json não encontrado!"
-    ls -la public/build/ || echo "📂 Pasta public/build não existe."
+    echo "❌ ERRO: manifest.json não encontrado! O build do frontend deve ser feito na etapa de build do Docker."
+    ls -la public/ || echo "📂 Pasta public não existe."
     exit 1
 fi
 
-# Otimizações do Laravel
+# Otimizações Laravel
 php artisan config:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan optimize
 
-# Permissões finais
+# Permissões
 chown -R www-data:www-data storage bootstrap/cache public/build
-chmod -R 775 storage bootstrap/cache
-chmod -R 755 public/build
+chmod -R 775 storage bootstrap/cache public/build
 
-echo "✅ Setup completo e Laravel pronto!"
+echo "✅ Laravel pronto e otimizado para produção!"
 exec php-fpm
