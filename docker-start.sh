@@ -5,34 +5,31 @@ cd /var/www/html
 
 echo "=== Iniciando Laravel no Render ==="
 
-# 1. Cria .env se não existir
+# Cria .env
 if [ ! -f .env ]; then
-    echo "Criando .env a partir de .env.example..."
     cp .env.example .env
     chmod 644 .env
 fi
 
-# 2. GERA APP_KEY (ANTES de qualquer cache!)
+# FORÇA HTTPS
+sed -i "s|APP_URL=.*|APP_URL=https://brotai.com.br|g" .env
+sed -i "s|VITE_APP_NAME=.*|VITE_APP_NAME=\"BRTai\"|g" .env
+
+# Gera APP_KEY
 if ! grep -q "APP_KEY=base64:" .env; then
-    echo "Gerando APP_KEY..."
     php artisan key:generate --force
 fi
 
-# 3. Limpa cache antigo
+# Cache
 php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-
-# 4. Cache de configuração (AGORA com APP_KEY)
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan optimize
 
-# 5. Permissões finais
+# Permissões
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# 6. Inicia Supervisor
-echo "Iniciando Supervisor (Nginx + PHP-FPM)..."
+echo "Iniciando Supervisor..."
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
