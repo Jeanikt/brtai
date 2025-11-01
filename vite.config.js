@@ -10,7 +10,10 @@ export default defineConfig({
         }),
         vue({
             template: {
-                transformAssetUrls: { base: null, includeAbsolute: false },
+                transformAssetUrls: {
+                    base: null,
+                    includeAbsolute: false,
+                },
             },
         }),
     ],
@@ -18,5 +21,9 @@ export default defineConfig({
         manifest: true,
         outDir: "public/build",
         emptyOutDir: true,
+    },
+    server: {
+        host: "0.0.0.0",
+        port: 5173,
     },
 });

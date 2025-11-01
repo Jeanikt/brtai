@@ -1,5 +1,4 @@
 {
-    "$schema": "https://json.schemastore.org/package.json",
     "private": true,
     "type": "module",
     "scripts": {
@@ -7,22 +6,22 @@
         "dev": "vite"
     },
     "devDependencies": {
-        "@inertiajs/vue3": "^2.0.0",
-        "@tailwindcss/forms": "^0.5.3",
-        "@tailwindcss/vite": "^4.0.0",
-        "@vitejs/plugin-vue": "^5.0.0",
-        "autoprefixer": "^10.4.12",
-        "axios": "^1.11.0",
+        "@inertiajs/vue3": "^1.2.0",
+        "@tailwindcss/forms": "^0.5.9",
+        "@tailwindcss/vite": "^4.0.0-alpha.19",
+        "@vitejs/plugin-vue": "^5.1.4",
+        "autoprefixer": "^10.4.21",
+        "axios": "^1.7.7",
         "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^2.0.0",
-        "postcss": "^8.4.31",
-        "tailwindcss": "^3.2.1",
+        "laravel-vite-plugin": "^1.0.5",
+        "postcss": "^8.4.47",
+        "tailwindcss": "^3.4.14",
         "typescript": "^5.6.3",
-        "vite": "^5.0.0",
-        "vue": "^3.4.0",
-        "vue-tsc": "^2.0.24"
+        "vite": "^5.4.9",
+        "vue": "^3.5.12",
+        "vue-tsc": "^2.1.6"
     },
     "dependencies": {
-        "ziggy-js": "^2.6.0"
+        "ziggy-js": "^2.3.0"
     }
 }
