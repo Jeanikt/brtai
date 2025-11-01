@@ -1,59 +1,77 @@
-# ------------------------------------------------
-# Etapa base: PHP com extensões necessárias
-# ------------------------------------------------
-FROM php:8.3-fpm AS base
+# ===============================================================
+# 🧱 Etapa base: PHP com extensões essenciais
+# ===============================================================
+FROM php:8.2-fpm AS base
 
+# Instala dependências de sistema e extensões PHP necessárias
 RUN apt-get update && apt-get install -y \
     git curl zip unzip libpq-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
     libonig-dev libxml2-dev libssl-dev libicu-dev g++ \
     && docker-php-ext-install pdo pdo_mysql bcmath zip intl opcache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd \
-    && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install gd
 
-# Instala Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Instala Composer globalmente
+RUN curl -sS https://getcomposer.org/installer | php \
+    && mv composer.phar /usr/local/bin/composer
 
 WORKDIR /var/www/html
 
-# ------------------------------------------------
-# Etapa frontend: build do Vite
-# ------------------------------------------------
+
+# ===============================================================
+# 🧰 Etapa frontend: build do Vite + Ziggy
+# ===============================================================
 FROM node:20 AS frontend
 
 WORKDIR /app
 
-# Copia apenas o que é necessário para o build do Vite
+# Copia os arquivos necessários para instalar dependências
 COPY package*.json vite.config.* ./
-COPY resources ./resources
 COPY tsconfig*.json ./
-
-# Copia vendor (necessário para Ziggy)
-COPY vendor ./vendor
+COPY resources ./resources
+COPY composer.json composer.lock ./
 COPY artisan ./
 
-# Instala dependências e faz o build
+# Instala Composer (para gerar rotas do Ziggy)
+RUN apt-get update && apt-get install -y curl git unzip \
+    && curl -sS https://getcomposer.org/installer | php \
+    && mv composer.phar /usr/local/bin/composer
+
+# Instala dependências PHP (para Ziggy) e JS
+RUN composer install --no-dev --no-interaction --prefer-dist
 RUN npm install
+
+# Build do Vite
 RUN npm run build
 
-# ------------------------------------------------
-# Etapa final: aplicação pronta
-# ------------------------------------------------
+
+# ===============================================================
+# 🧩 Etapa final: imagem leve pronta para produção
+# ===============================================================
 FROM base AS production
 
 WORKDIR /var/www/html
 
-# Copia arquivos da aplicação
+# Copia o backend Laravel
 COPY . .
 
-# Copia o build do frontend
+# Copia o build frontend gerado
 COPY --from=frontend /app/public/build ./public/build
 
-# Instala dependências PHP
-RUN composer install --no-dev --optimize-autoloader
+# Copia dependências PHP (vendor)
+COPY --from=frontend /app/vendor ./vendor
 
-# Define permissões
-RUN chown -R www-data:www-data storage bootstrap/cache
+# Ajusta permissões
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
 
+# Define variáveis de ambiente padrão
+ENV APP_ENV=production
+ENV APP_DEBUG=false
+ENV APP_KEY=base64:B0Rn6M7dRH6PdG3O4btbhK0uHQb2tyzdPWC8xj4E/qY=
+
+# Porta de exposição
 EXPOSE 9000
+
+# Comando de inicialização do PHP-FPM
 CMD ["php-fpm"]
