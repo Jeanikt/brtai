@@ -35,4 +35,7 @@ return [
         'url' => env('ABACATEPAY_BASE_URL', 'https://api.abacatepay.com/v1'),
         'webhook_secret' => env('ABACATEPAY_WEBHOOK_SECRET', 'webh_dev_24Kzwr0q6YCHGzkDUeGAQ6JL'),
     ],
+    'discord' => [
+        'webhook' => env('DISCORD_WEBHOOK_URL'),
+    ],
 ];
