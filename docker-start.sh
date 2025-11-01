@@ -15,7 +15,7 @@ if ! grep -q "APP_KEY=base64:" .env; then
     php artisan key:generate --force
 fi
 
-# Atualiza variáveis se existirem no arquivo
+# Atualiza variáveis essenciais
 if grep -q "APP_URL=" .env; then
     sed -i "s|APP_URL=.*|APP_URL=https://brotai.com.br|g" .env
 else
@@ -28,9 +28,9 @@ else
     echo "VITE_APP_NAME=\"BRTai\"" >> .env
 fi
 
-# Verifica se o manifest existe (não deve precisar buildar no container)
+# Verifica se o manifest existe
 if [ ! -f public/build/manifest.json ]; then
-    echo "❌ ERRO: manifest.json não encontrado! O build do frontend deve ser feito na etapa de build do Docker."
+    echo "❌ ERRO: manifest.json não encontrado! O build deve ser feito na etapa de build do Docker."
     ls -la public/ || echo "📂 Pasta public não existe."
     exit 1
 fi
@@ -42,7 +42,7 @@ php artisan route:cache
 php artisan view:cache
 php artisan optimize
 
-# Permissões
+# Ajusta permissões
 chown -R www-data:www-data storage bootstrap/cache public/build
 chmod -R 775 storage bootstrap/cache public/build
 
