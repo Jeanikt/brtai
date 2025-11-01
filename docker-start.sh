@@ -3,24 +3,24 @@ set -e
 
 cd /var/www/html
 
-echo "=== Starting Laravel on Render ==="
+echo "=== Iniciando Laravel no Render ==="
 
 # Cria .env se não existir
 if [ ! -f .env ]; then
-    echo "Creating .env from .env.example..."
+    echo "Criando .env a partir de .env.example..."
     cp .env.example .env
 fi
 
 # Configura APP_KEY
 if [ -n "$APP_KEY" ]; then
-    echo "Using provided APP_KEY"
+    echo "APP_KEY fornecida via variável de ambiente"
     sed -i "s|APP_KEY=.*|APP_KEY=$APP_KEY|g" .env
 elif ! grep -q "APP_KEY=base64:" .env; then
-    echo "Generating APP_KEY..."
+    echo "Gerando nova APP_KEY..."
     php artisan key:generate --force
 fi
 
-# Limpa e cacheia configs
+# Cache de configuração
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
@@ -29,6 +29,6 @@ php artisan route:cache
 php artisan view:cache
 php artisan optimize
 
-# Inicia Supervisor (Nginx + PHP-FPM)
-echo "Starting Supervisor..."
+# Inicia Supervisor
+echo "Iniciando Supervisor (Nginx + PHP-FPM)..."
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
