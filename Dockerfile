@@ -10,7 +10,7 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-FROM node:20.18-alpine AS build-frontend
+FROM node:20.19-alpine AS build-frontend
 
 WORKDIR /app
 
@@ -19,8 +19,6 @@ COPY resources ./resources
 
 RUN npm ci --legacy-peer-deps
 RUN npm run build
-RUN ls -la public/build/
-RUN [ -f public/build/manifest.json ] && echo "Manifest exists" || echo "Manifest missing"
 
 FROM php:8.3.13-fpm-alpine
 
@@ -33,6 +31,8 @@ RUN apk add --no-cache \
     libjpeg-turbo \
     libzip \
     libpq \
+    nodejs=20.19.1-r0 \
+    npm=10.9.1-r0 \
     \
     && apk add --no-cache --virtual .build-deps \
     libpng-dev \
@@ -59,11 +59,6 @@ COPY --from=build-frontend /app/public/build ./public/build
 
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 storage bootstrap/cache public/build
-
-RUN echo "=== Verificando assets do Vite ===" && \
-    ls -la /var/www/html/public/ && \
-    echo "=== Build directory ===" && \
-    ls -la /var/www/html/public/build/ || echo "Build directory não encontrada"
 
 COPY docker-start.sh /usr/local/bin/docker-start.sh
 RUN chmod +x /usr/local/bin/docker-start.sh

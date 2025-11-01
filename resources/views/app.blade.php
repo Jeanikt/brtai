@@ -19,6 +19,9 @@
             @if(isset($manifest['resources/js/app.ts']))
                 <script type="module" src="{{ asset('build/' . $manifest['resources/js/app.ts']['file']) }}"></script>
                 <link rel="stylesheet" href="{{ asset('build/' . $manifest['resources/js/app.ts']['css'][0]) }}">
+            @elseif(isset($manifest['resources/js/app.js']))
+                <script type="module" src="{{ asset('build/' . $manifest['resources/js/app.js']['file']) }}"></script>
+                <link rel="stylesheet" href="{{ asset('build/' . $manifest['resources/js/app.js']['css'][0]) }}">
             @else
                 @vite(['resources/css/app.css', 'resources/js/app.ts'])
             @endif

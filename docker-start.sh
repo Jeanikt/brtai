@@ -10,16 +10,15 @@ if [ ! -f .env ]; then
     chmod 644 .env
 fi
 
-sed -i "s|APP_URL=.*|APP_URL=https://brotai.com.br|g" .env
-sed -i "s|VITE_APP_NAME=.*|VITE_APP_NAME=\"BRTai\"|g" .env
-
 if ! grep -q "APP_KEY=base64:" .env; then
     php artisan key:generate --force
 fi
 
+sed -i "s|APP_URL=.*|APP_URL=https://brotai.com.br|g" .env
+sed -i "s|VITE_APP_NAME=.*|VITE_APP_NAME=\"BRTai\"|g" .env
+
 if [ ! -f public/build/manifest.json ]; then
     echo "⚠️  Assets do Vite não encontrados. Executando build..."
-    apk add --no-cache nodejs npm
     npm ci --legacy-peer-deps
     npm run build
 fi
