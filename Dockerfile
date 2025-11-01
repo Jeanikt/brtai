@@ -1,14 +1,11 @@
 # ============================
 # Etapa 1 - Dependências PHP (Vendor)
 # ============================
-FROM composer:2.7 AS vendor
+FROM composer:2.7.9 AS vendor
 
 WORKDIR /app
 
-# Copia apenas os arquivos necessários para composer
 COPY composer.json composer.lock ./
-
-# Instala dependências PHP (sem dev, otimizado)
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -17,28 +14,24 @@ RUN composer install \
     --no-scripts
 
 # ============================
-# Etapa 2 - Build do Frontend (Vite + ziggy-js)
+# Etapa 2 - Build do Frontend
 # ============================
-FROM node:20-alpine AS build-frontend
+FROM node:20.18-alpine AS build-frontend
 
 WORKDIR /app
 
-# Copia configs do frontend
 COPY package*.json vite.config.js tailwind.config.js postcss.config.js tsconfig.json ./
 COPY resources ./resources
 
-# Instala dependências do Node (inclui ziggy-js)
 RUN npm ci --legacy-peer-deps
-
-# Executa o build do Vite
 RUN npm run build
 
 # ============================
 # Etapa 3 - Runtime (PHP-FPM + Nginx)
 # ============================
-FROM php:8.3-fpm-alpine
+FROM php:8.3.13-fpm-alpine
 
-# Instala pacotes do sistema
+# Instala pacotes + headers do PostgreSQL
 RUN apk add --no-cache \
     nginx \
     supervisor \
@@ -50,34 +43,32 @@ RUN apk add --no-cache \
     zip \
     unzip \
     oniguruma-dev \
+    postgresql-dev \
     && docker-php-ext-configure gd --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif
+    && docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif \
+    && apk del --purge postgresql-dev libpng-dev libjpeg-turbo-dev libzip-dev oniguruma-dev \
+    && rm -rf /var/cache/apk/*
 
-# Copia configurações do Nginx e Supervisor
+# Copia configurações
 COPY etc/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Diretório da aplicação
 WORKDIR /var/www/html
-
-# Copia todo o código fonte
 COPY . .
 
-# Copia vendor (do stage 1) e assets compilados (do stage 2)
+# Copia vendor e build
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=build-frontend /app/public/build ./public/build
 
-# Permissões corretas
+# Permissões
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 storage bootstrap/cache
 
-# Copia script de inicialização
+# Script de inicialização
 COPY docker-start.sh /usr/local/bin/docker-start.sh
 RUN chmod +x /usr/local/bin/docker-start.sh
 
-# Porta usada pelo Render
 EXPOSE 10000
 
-# Inicia o Supervisor (gerencia Nginx + PHP-FPM)
 CMD ["/usr/local/bin/docker-start.sh"]
