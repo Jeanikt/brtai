@@ -3,6 +3,7 @@ services:
     name: brtai
     runtime: docker
     plan: free
+    dockerfilePath: Dockerfile
     envVars:
       - key: APP_ENV
         value: production
@@ -10,6 +11,6 @@ services:
         value: "false"
       - key: LOG_CHANNEL
         value: stderr
-    buildCommand: ""
-    startCommand: /usr/local/bin/docker-start.sh
+      - key: APP_KEY
+        sync: false
     healthCheckPath: /
