@@ -14,7 +14,7 @@ RUN composer install \
     --no-scripts
 
 # ============================
-# Etapa 2 - Build do Frontend
+# Etapa 2 - Build do Frontend (Vite)
 # ============================
 FROM node:20.18-alpine AS build-frontend
 
@@ -31,33 +31,43 @@ RUN npm run build
 # ============================
 FROM php:8.3.13-fpm-alpine
 
-# Instala pacotes + headers do PostgreSQL
+# Instala pacotes RUNTIME + BUILD
 RUN apk add --no-cache \
+    # RUNTIME: necessários para extensões PHP
     nginx \
     supervisor \
     bash \
     curl \
+    libpng \
+    libjpeg-turbo \
+    libzip \
+    libpq \
+    \
+    # BUILD: apenas para compilar extensões
+    && apk add --no-cache --virtual .build-deps \
     libpng-dev \
     libjpeg-turbo-dev \
     libzip-dev \
-    zip \
-    unzip \
     oniguruma-dev \
     postgresql-dev \
+    \
     && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif \
-    && apk del --purge postgresql-dev libpng-dev libjpeg-turbo-dev libzip-dev oniguruma-dev \
-    && rm -rf /var/cache/apk/*
+    \
+    # Remove APENAS pacotes de build
+    && apk del --purge .build-deps \
+    && rm -rf /var/cache/apk/* /tmp/*
 
 # Copia configurações
 COPY etc/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Diretório da aplicação
 WORKDIR /var/www/html
 COPY . .
 
-# Copia vendor e build
+# Copia vendor e assets
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=build-frontend /app/public/build ./public/build
 
