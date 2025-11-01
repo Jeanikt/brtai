@@ -1,70 +1,65 @@
 # ============================
 # Etapa 1 - Build do Frontend
 # ============================
-FROM node:20 AS build-frontend
+FROM node:20-alpine AS build-frontend
 
-# Define o diretório de trabalho
 WORKDIR /app
 
-# Copia arquivos de dependências do Node
+# Copia apenas arquivos necessários para o frontend
 COPY package*.json ./
+COPY vite.config.js ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY tsconfig.json ./
+COPY resources/ ./resources/
 
-# Atualiza o npm e instala dependências (mantendo compatibilidade)
-RUN npm install -g npm@latest
-RUN npm install --legacy-peer-deps
-
-# Copia o restante do código para dentro do container
-COPY . .
-
-# Cria stub do Ziggy para evitar erro de importação no build (mock de plugin Vue)
-RUN mkdir -p vendor/tightenco/ziggy && \
-    echo "export default {}; export const ZiggyVue = { install() {} }; " > vendor/tightenco/ziggy/index.js
-
-# Gera build de produção do Vue (Vite)
+RUN npm ci --legacy-peer-deps
 RUN npm run build
-
 
 # ============================
 # Etapa 2 - Backend PHP (Laravel)
 # ============================
-FROM php:8.3-fpm
+FROM php:8.3-fpm-alpine
 
-# Instala dependências necessárias do Laravel
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+# Instala dependências do sistema
+RUN apk add --no-cache \
+    bash \
+    curl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    oniguruma-dev \
+    postgresql-dev \
+    supervisor
 
-# Instala o Composer globalmente
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Extensões PHP necessárias
+RUN docker-php-ext-configure gd --with-jpeg
+RUN docker-php-ext-install pdo pdo_pgsql mbstring zip gd
 
-# Define o diretório de trabalho
+# Instala Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
 WORKDIR /var/www/html
 
-# Copia o código do projeto Laravel
+# Copia código da aplicação
 COPY . .
 
-# Copia os arquivos buildados do frontend para a pasta pública do Laravel
-COPY --from=build-frontend /app/public ./public
+# Copia build do frontend
+COPY --from=build-frontend /app/public/build ./public/build/
 
-# Instala dependências PHP sem dev
+# Instala dependências PHP
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# Gera APP_KEY se estiver vazia
-RUN php -r "if (!getenv('APP_KEY') || getenv('APP_KEY') === '') { \
-    echo \"Gerando APP_KEY automaticamente...\n\"; \
-    passthru('php artisan key:generate --force'); \
-} else { \
-    echo \"APP_KEY já definida, pulando geração...\n\"; \
-}"
+# Ajusta permissões
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 storage bootstrap/cache
 
-# Cacheia configurações e rotas
-RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
+# Script de inicialização
+COPY docker-start.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-start.sh
 
-# Ajusta permissões de pastas importantes
-RUN chmod -R 775 storage bootstrap/cache
-
-# Expõe a porta usada pelo Laravel
 EXPOSE 8000
 
-# Comando padrão do container
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["/usr/local/bin/docker-start.sh"]
