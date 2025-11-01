@@ -3,14 +3,22 @@ services:
     name: brtai
     runtime: docker
     plan: free
-    dockerfilePath: Dockerfile
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
     envVars:
+      - key: APP_NAME
+        value: BRTai
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: "false"
+      - key: APP_URL
+        sync: false  
       - key: LOG_CHANNEL
         value: stderr
-      - key: APP_KEY
-        sync: false
-    healthCheckPath: /
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: CACHE_DRIVER
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: sync
