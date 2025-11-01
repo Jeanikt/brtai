@@ -13,7 +13,7 @@ COPY postcss.config.js ./
 COPY tsconfig.json ./
 COPY resources/ ./resources/
 
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 RUN npm run build
 
 # ============================
