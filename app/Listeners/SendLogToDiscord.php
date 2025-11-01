@@ -22,7 +22,7 @@ class SendLogToDiscord
             Http::withOptions(['verify' => false]) // apenas para teste local
                 ->timeout(5)
                 ->post($webhookUrl, [
-                    'username' => 'Laravel Logs 🧱',
+                    'username' => 'BrotaAI Logs 🧱',
                     'avatar_url' => 'https://laravel.com/img/logomark.min.svg',
                     'embeds' => [[
                         'title' => strtoupper($event->level) . ' Log',
