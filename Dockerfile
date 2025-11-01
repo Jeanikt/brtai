@@ -9,7 +9,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --optimize-autoloader --no-scripts
 
 # ============================
-# Etapa 2 - Build do Frontend
+# Etapa 2 - Build do Frontend (Vite)
 # ============================
 FROM node:20-alpine AS build-frontend
 
@@ -17,6 +17,7 @@ WORKDIR /app
 
 COPY package*.json vite.config.js tailwind.config.js postcss.config.js tsconfig.json ./
 COPY resources ./resources
+
 RUN npm ci --legacy-peer-deps
 RUN npm run build
 
@@ -25,9 +26,10 @@ RUN npm run build
 # ============================
 FROM php:8.3-fpm-alpine
 
-# Instala dependências do sistema
+# Instala pacotes do sistema
 RUN apk add --no-cache \
     nginx \
+    supervisor \
     bash \
     curl \
     libpng-dev \
@@ -36,19 +38,21 @@ RUN apk add --no-cache \
     zip \
     unzip \
     oniguruma-dev \
-    supervisor \
     && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif
 
-# Configura Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY default.conf /etc/nginx/conf.d/default.conf
+# Copia configurações
+COPY etc/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Copia código da aplicação
+# Diretório da aplicação
 WORKDIR /var/www/html
+
+# Copia código fonte
 COPY . .
 
-# Copia vendor e build
+# Copia vendor e assets compilados
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=build-frontend /app/public/build ./public/build
 
@@ -60,8 +64,8 @@ RUN chown -R www-data:www-data /var/www/html \
 COPY docker-start.sh /usr/local/bin/docker-start.sh
 RUN chmod +x /usr/local/bin/docker-start.sh
 
-# Expoe porta do Render
+# Porta do Render
 EXPOSE 10000
 
-# Inicia Supervisor (gerencia PHP-FPM + Nginx)
+# Inicia Supervisor (Nginx + PHP-FPM)
 CMD ["/usr/local/bin/docker-start.sh"]
