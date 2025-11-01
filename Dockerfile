@@ -5,20 +5,32 @@ FROM composer:2.7 AS vendor
 
 WORKDIR /app
 
+# Copia apenas os arquivos necessários para composer
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --optimize-autoloader --no-scripts
+
+# Instala dependências PHP (sem dev, otimizado)
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-scripts
 
 # ============================
-# Etapa 2 - Build do Frontend (Vite)
+# Etapa 2 - Build do Frontend (Vite + ziggy-js)
 # ============================
 FROM node:20-alpine AS build-frontend
 
 WORKDIR /app
 
+# Copia configs do frontend
 COPY package*.json vite.config.js tailwind.config.js postcss.config.js tsconfig.json ./
 COPY resources ./resources
 
+# Instala dependências do Node (inclui ziggy-js)
 RUN npm ci --legacy-peer-deps
+
+# Executa o build do Vite
 RUN npm run build
 
 # ============================
@@ -41,7 +53,7 @@ RUN apk add --no-cache \
     && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql mbstring zip gd exif
 
-# Copia configurações
+# Copia configurações do Nginx e Supervisor
 COPY etc/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -49,23 +61,23 @@ COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Diretório da aplicação
 WORKDIR /var/www/html
 
-# Copia código fonte
+# Copia todo o código fonte
 COPY . .
 
-# Copia vendor e assets compilados
+# Copia vendor (do stage 1) e assets compilados (do stage 2)
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=build-frontend /app/public/build ./public/build
 
-# Permissões
+# Permissões corretas
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 storage bootstrap/cache
 
-# Script de inicialização
+# Copia script de inicialização
 COPY docker-start.sh /usr/local/bin/docker-start.sh
 RUN chmod +x /usr/local/bin/docker-start.sh
 
-# Porta do Render
+# Porta usada pelo Render
 EXPOSE 10000
 
-# Inicia Supervisor (Nginx + PHP-FPM)
+# Inicia o Supervisor (gerencia Nginx + PHP-FPM)
 CMD ["/usr/local/bin/docker-start.sh"]
