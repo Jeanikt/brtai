@@ -2,10 +2,9 @@
 set -e
 
 cd /var/www/html
+echo "=== Iniciando Laravel no Render ==="
 
-echo "=== 🚀 Iniciando Laravel no Render ==="
-
-# Cria .env se não existir
+# Copia .env se não existir
 if [ ! -f .env ]; then
     cp .env.example .env
     chmod 644 .env
