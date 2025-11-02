@@ -1,18 +1,20 @@
-# Use uma imagem base com PHP 8.2
+# Use uma imagem base com PHP 8.2 e Node.js 20
 FROM ubuntu:22.04
 
 # Evita prompts interativos durante a instalação
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Adiciona repositório do PHP 8.2
+# Adiciona repositórios do PHP 8.2 e Node.js 20
 RUN apt-get update && apt-get install -y \
     software-properties-common \
+    curl \
+    gnupg \
     && add-apt-repository ppa:ondrej/php -y \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update
 
-# Instala dependências com PHP 8.2
+# Instala dependências com PHP 8.2 e Node.js 20
 RUN apt-get install -y \
-    curl \
     nginx \
     php8.2 \
     php8.2-fpm \
@@ -27,13 +29,18 @@ RUN apt-get install -y \
     php8.2-tokenizer \
     php8.2-common \
     nodejs \
-    npm \
     redis-server \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Verifica versões instaladas
+RUN echo "Node.js version: $(node --version)" && \
+    echo "NPM version: $(npm --version)" && \
+    echo "PHP version: $(php --version | head -1)" && \
+    echo "PHP-FPM version: $(php-fpm8.2 --version | head -1)"
 
 # Diretório de trabalho
 WORKDIR /var/www/html
