@@ -5,10 +5,7 @@ FROM composer:2 AS vendor
 
 WORKDIR /app
 
-# Copia os arquivos necessários para o Composer
 COPY composer.json composer.lock ./
-
-# Instala dependências de produção sem rodar scripts do Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # ============================
@@ -18,46 +15,47 @@ FROM node:20 AS frontend
 
 WORKDIR /app
 
-# Copia arquivos de dependência do Node
 COPY package*.json vite.config.* ./
 RUN npm ci --no-audit --prefer-offline
 
-# Copia recursos e dependências para Ziggy
 COPY resources ./resources
 COPY public ./public
 COPY --from=vendor /app/vendor ./vendor
 COPY artisan ./
 
-# Compila os assets de produção
 RUN npm run build
 
 # ============================
-# Etapa 3 — Imagem final PHP (produção)
+# Etapa 3 — Imagem final com PHP-FPM + Nginx
 # ============================
-FROM php:8.2-fpm AS production
+FROM php:8.2-fpm
 
-WORKDIR /var/www/html
-
-# Instala extensões PHP necessárias
+# Instala Nginx e extensões PHP
 RUN apt-get update && apt-get install -y \
+    nginx \
     git unzip zip curl libpng-dev libonig-dev libxml2-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia a aplicação e dependências
+# Configuração do Nginx
+COPY ./nginx.conf /etc/nginx/sites-available/default
+RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+
+# Copia aplicação
+WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public ./public
 COPY . .
 
-# Permissões corretas
+# Permissões
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Copia entrypoint para inicialização dinâmica
+# Entrypoint
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 9000
+# Porta do Render (variável de ambiente)
+EXPOSE $PORT
 
 ENTRYPOINT ["/entrypoint.sh"]
-
-CMD ["php-fpm"]
+CMD ["sh", "-c", "php-fpm & nginx -g 'daemon off;'"]
