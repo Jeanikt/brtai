@@ -8,7 +8,7 @@ WORKDIR /app
 # Copia os arquivos necessários para o Composer
 COPY composer.json composer.lock ./
 
-# Instala dependências de produção sem rodar scripts do Laravel (como package:discover)
+# Instala dependências de produção sem rodar scripts do Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # ============================
@@ -44,21 +44,20 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia aplicação e dependências
+# Copia a aplicação e dependências
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public ./public
 COPY . .
 
-# Ajusta permissões para o Laravel
+# Permissões corretas
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Executa otimizações do Laravel
-RUN php artisan key:generate --force && \
-    php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache && \
-    php artisan event:cache
+# Copia entrypoint para inicialização dinâmica
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 9000
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["php-fpm"]
