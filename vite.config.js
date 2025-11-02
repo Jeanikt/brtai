@@ -7,9 +7,9 @@ export default defineConfig({
         laravel({
             input: [
                 "resources/css/app.css",
-                "resources/js/app.ts" 
+                "resources/js/app.ts"
             ],
-            refresh: true,
+            refresh: false, 
         }),
         vue({
             template: {
@@ -24,5 +24,9 @@ export default defineConfig({
         alias: {
             '@': '/resources/js',
         },
+    },
+    build: {
+        manifest: true,
+        outDir: 'public/build',
     },
 });
