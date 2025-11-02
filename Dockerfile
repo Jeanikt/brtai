@@ -1,19 +1,17 @@
-# Use uma imagem base com PHP 8.2 e Node.js 20
+# Use uma imagem base com PHP 8.2
 FROM ubuntu:22.04
 
-# Evita prompts interativos durante a instalação
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Adiciona repositórios do PHP 8.2 e Node.js 20
+# Instala dependências básicas
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     curl \
     gnupg \
     && add-apt-repository ppa:ondrej/php -y \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update
 
-# Instala dependências
+# Instala PHP, Nginx e Redis
 RUN apt-get install -y \
     nginx \
     php8.2 \
@@ -26,46 +24,31 @@ RUN apt-get install -y \
     php8.2-gd \
     php8.2-bcmath \
     php8.2-redis \
-    php8.2-tokenizer \
-    php8.2-common \
     nodejs \
+    npm \
     redis-server \
-    postgresql-client \
-    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Diretório de trabalho
 WORKDIR /var/www/html
 
-# 🔥 COPIA TODOS OS ARQUIVOS PRIMEIRO (incluindo artisan)
+# 🔥 COPIA TODOS OS ARQUIVOS (incluindo os assets já built)
 COPY . .
 
-# 🔥 DESABILITA SCRIPTS DO COMPOSER PARA EVITAR ERRO DO ARTISAN
+# 🔥 INSTALA APENAS DEPENDÊNCIAS PHP (já temos os assets)
 RUN composer install --no-dev --optimize-autoloader --no-scripts
-
-# 🔥 AGORA EXECUTA OS SCRIPTS MANUALMENTE (após todos os arquivos estarem copiados)
-RUN composer run-script post-autoload-dump
-
-# Instala dependências Node.js e build
-RUN npm ci && npm run build
 
 # Configura Nginx
 COPY docker/nginx.conf /etc/nginx/sites-available/default
 RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
-# Configura PHP-FPM
-RUN mkdir -p /var/run/php
+# Configura PHP-FPM e Redis
+RUN mkdir -p /var/run/php /var/run/redis
 
-# Configura Redis
-RUN mkdir -p /var/run/redis && chown redis:redis /var/run/redis
-
-# Expõe a porta
 EXPOSE 8080
 
-# Script de inicialização
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
