@@ -1,67 +1,65 @@
-# ================================
-# Etapa 1: Backend (Composer + PHP)
-# ================================
-FROM php:8.2-fpm AS backend
+# ============================
+# Etapa 1 — Instala dependências PHP e Composer
+# ============================
+FROM composer:2 AS vendor
 
-WORKDIR /var/www/html
+WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    git unzip zip curl libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
-
-# Instala o Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Copia os arquivos necessários e instala dependências PHP
+# Copia os arquivos de dependência PHP
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --prefer-dist
 
-# Copia o restante do projeto Laravel
-COPY . .
+# Instala apenas dependências de produção
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
-# ================================
-# Etapa 2: Frontend (Vite)
-# ================================
+# ============================
+# Etapa 2 — Build do Frontend (Vite)
+# ============================
 FROM node:20 AS frontend
 
 WORKDIR /app
 
-# Copia o projeto inteiro (já com vendor do backend)
-COPY --from=backend /var/www/html /app
+# Copia os arquivos do frontend
+COPY package*.json vite.config.* ./
+RUN npm ci --no-audit --prefer-offline
 
-RUN npm ci
+# Copia recursos do frontend
+COPY resources ./resources
+COPY public ./public
+
+# Copia dependências PHP para o Ziggy
+COPY --from=vendor /app/vendor ./vendor
+COPY artisan ./
+
+# Compila os assets para produção
 RUN npm run build
 
-# ================================
-# Etapa 3: Produção final (PHP + Nginx)
-# ================================
+# ============================
+# Etapa 3 — Imagem final PHP (produção)
+# ============================
 FROM php:8.2-fpm AS production
 
 WORKDIR /var/www/html
 
-RUN apt-get update && apt-get install -y nginx && apt-get clean
+# Instala extensões necessárias do Laravel
+RUN apt-get update && apt-get install -y \
+    git unzip zip curl libpng-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copia o Laravel completo e o build do frontend
-COPY --from=backend /var/www/html ./
-COPY --from=frontend /app/public/build ./public/build
+# Copia os arquivos do backend e dependências
+COPY --from=vendor /app/vendor ./vendor
+COPY --from=frontend /app/public ./public
+COPY . .
 
-# Permissões adequadas
-RUN chmod -R 775 storage bootstrap/cache && \
-    chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Ajusta permissões (importante para o Laravel rodar corretamente)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Otimiza o Laravel para produção
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache && \
+    php artisan event:cache
 
-EXPOSE 80
+EXPOSE 9000
 
-# Script de inicialização
-RUN echo '#!/bin/bash' > /start.sh && \
-    echo 'php artisan config:cache' >> /start.sh && \
-    echo 'php artisan route:cache' >> /start.sh && \
-    echo 'php artisan view:cache' >> /start.sh && \
-    echo 'chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache' >> /start.sh && \
-    echo 'chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache' >> /start.sh && \
-    echo 'service nginx start && php-fpm' >> /start.sh && \
-    chmod +x /start.sh
-
-CMD ["/start.sh"]
+CMD ["php-fpm"]
