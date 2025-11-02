@@ -5,11 +5,8 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
     plugins: [
         laravel({
-            input: [
-                "resources/css/app.css",
-                "resources/js/app.ts"
-            ],
-            refresh: false, 
+            input: "resources/js/app.ts",
+            refresh: true,
         }),
         vue({
             template: {
@@ -20,13 +17,4 @@ export default defineConfig({
             },
         }),
     ],
-    resolve: {
-        alias: {
-            '@': '/resources/js',
-        },
-    },
-    build: {
-        manifest: true,
-        outDir: 'public/build',
-    },
 });
