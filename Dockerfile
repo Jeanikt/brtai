@@ -1,40 +1,52 @@
 # ================================
-# Etapa 1: Construção do frontend
+# Etapa 1: Backend (Composer + PHP)
+# ================================
+FROM php:8.2-fpm AS backend
+
+WORKDIR /var/www/html
+
+RUN apt-get update && apt-get install -y \
+    git unzip zip curl libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Instala o Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copia os arquivos necessários e instala dependências PHP
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist
+
+# Copia o restante do projeto Laravel
+COPY . .
+
+# ================================
+# Etapa 2: Frontend (Vite)
 # ================================
 FROM node:20 AS frontend
 
 WORKDIR /app
 
-COPY package*.json vite.config.* ./
-COPY resources ./resources
-COPY public ./public
-
-# Copia vendor e composer.json para permitir acesso ao Ziggy
-COPY vendor ./vendor
-COPY composer.json composer.lock ./
+# Copia o projeto inteiro (já com vendor do backend)
+COPY --from=backend /var/www/html /app
 
 RUN npm ci
 RUN npm run build
 
 # ================================
-# Etapa 2: Backend Laravel + PHP
+# Etapa 3: Produção final (PHP + Nginx)
 # ================================
 FROM php:8.2-fpm AS production
 
-RUN apt-get update && apt-get install -y \
-    git unzip libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev zip curl nginx \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
-
 WORKDIR /var/www/html
 
-COPY . .
+RUN apt-get update && apt-get install -y nginx && apt-get clean
 
-# Copia build do frontend
+# Copia o Laravel completo e o build do frontend
+COPY --from=backend /var/www/html ./
 COPY --from=frontend /app/public/build ./public/build
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-RUN composer install --no-dev --optimize-autoloader
-
+# Permissões adequadas
 RUN chmod -R 775 storage bootstrap/cache && \
     chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
@@ -42,6 +54,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
+# Script de inicialização
 RUN echo '#!/bin/bash' > /start.sh && \
     echo 'php artisan config:cache' >> /start.sh && \
     echo 'php artisan route:cache' >> /start.sh && \
