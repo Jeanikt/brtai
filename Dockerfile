@@ -5,32 +5,30 @@ FROM composer:2 AS vendor
 
 WORKDIR /app
 
-# Copia os arquivos de dependência PHP
+# Copia os arquivos necessários para o Composer
 COPY composer.json composer.lock ./
 
-# Instala apenas dependências de produção
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+# Instala dependências de produção sem rodar scripts do Laravel (como package:discover)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # ============================
-# Etapa 2 — Build do Frontend (Vite)
+# Etapa 2 — Build do Frontend (Vite + Ziggy)
 # ============================
 FROM node:20 AS frontend
 
 WORKDIR /app
 
-# Copia os arquivos do frontend
+# Copia arquivos de dependência do Node
 COPY package*.json vite.config.* ./
 RUN npm ci --no-audit --prefer-offline
 
-# Copia recursos do frontend
+# Copia recursos e dependências para Ziggy
 COPY resources ./resources
 COPY public ./public
-
-# Copia dependências PHP para o Ziggy
 COPY --from=vendor /app/vendor ./vendor
 COPY artisan ./
 
-# Compila os assets para produção
+# Compila os assets de produção
 RUN npm run build
 
 # ============================
@@ -40,22 +38,23 @@ FROM php:8.2-fpm AS production
 
 WORKDIR /var/www/html
 
-# Instala extensões necessárias do Laravel
+# Instala extensões PHP necessárias
 RUN apt-get update && apt-get install -y \
     git unzip zip curl libpng-dev libonig-dev libxml2-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia os arquivos do backend e dependências
+# Copia aplicação e dependências
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public ./public
 COPY . .
 
-# Ajusta permissões (importante para o Laravel rodar corretamente)
+# Ajusta permissões para o Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Otimiza o Laravel para produção
-RUN php artisan config:cache && \
+# Executa otimizações do Laravel
+RUN php artisan key:generate --force && \
+    php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache && \
     php artisan event:cache
