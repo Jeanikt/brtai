@@ -11,20 +11,23 @@ RUN apt-get update && apt-get install -y \
 # Instala Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copia arquivos do Laravel
+# Copia código Laravel
 COPY . .
 
-# Instala dependências PHP (sem dev)
+# Instala dependências PHP
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# Gera cache de config e rotas
+# Cache de config e rotas
 RUN php artisan config:cache && php artisan route:cache
+
+# Corrige permissões
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Etapa 2 — Frontend (Node + Vite)
 FROM node:20-bookworm AS frontend
 
 WORKDIR /app
-
 COPY --from=backend /var/www/html /app
 
 RUN npm install && npm run build
@@ -32,16 +35,16 @@ RUN npm install && npm run build
 # Etapa 3 — Produção (Nginx + PHP-FPM)
 FROM nginx:alpine AS production
 
-# Instala PHP-FPM e extensões no Alpine
-RUN apk add --no-cache php82 php82-fpm php82-opcache php82-pdo php82-pdo_mysql php82-mbstring php82-tokenizer php82-xml php82-gd php82-fileinfo
+# Instala PHP no Alpine
+RUN apk add --no-cache php82 php82-fpm php82-opcache php82-pdo php82-pdo_mysql php82-mbstring php82-tokenizer php82-xml php82-gd php82-fileinfo php82-session
 
 WORKDIR /var/www/html
 
-# Copia aplicação compilada
+# Copia aplicação
 COPY --from=backend /var/www/html ./
 COPY --from=frontend /app/public/build ./public/build
 
-# Copia configuração do Nginx
+# Copia config do Nginx
 COPY ./nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
