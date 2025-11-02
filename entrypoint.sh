@@ -1,17 +1,27 @@
 #!/bin/sh
 set -e
 
-# Gera APP_KEY se não existir
+# Define porta padrão caso Render não defina (útil localmente)
+PORT=${PORT:-8080}
+
+# Substitui ${PORT} no template e gera o config final
+echo "Configurando Nginx para porta $PORT..."
+envsubst '${PORT}' < /etc/nginx/sites-available/default.template > /etc/nginx/sites-available/default
+
+# Garante que o site está habilitado
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/ || true
+
+# Gera APP_KEY se necessário
 if [ ! -f .env ]; then
-  echo "⚠️  Nenhum arquivo .env encontrado! Usando variáveis de ambiente do Render."
+  echo "Nenhum .env encontrado. Usando variáveis de ambiente do Render."
 else
-  if ! grep -q "^APP_KEY=base64:" .env; then
-    echo "🔑 Gerando APP_KEY..."
+  if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
+    echo "Gerando APP_KEY..."
     php artisan key:generate --force
   fi
 fi
 
-echo "⚙️ Otimizações do Laravel..."
+echo "Otimizações do Laravel..."
 php artisan config:clear || true
 php artisan cache:clear || true
 php artisan route:clear || true
@@ -23,5 +33,6 @@ php artisan route:cache || true
 php artisan view:cache || true
 php artisan event:cache || true
 
-echo "🚀 Iniciando Nginx + PHP-FPM..."
-exec "$@"
+echo "Iniciando PHP-FPM e Nginx na porta $PORT..."
+php-fpm -D  # Roda em background
+nginx -g 'daemon off;'  # Roda em foreground
