@@ -1,52 +1,57 @@
-# Etapa 1 — Backend (PHP + Composer)
-FROM php:8.2-fpm AS backend
-
-WORKDIR /var/www/html
-
-# Instala dependências do sistema e PHP
-RUN apt-get update && apt-get install -y \
-    git unzip libpng-dev libonig-dev libxml2-dev zip curl \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
-
-# Instala Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Copia código Laravel
-COPY . .
-
-# Instala dependências PHP
-RUN composer install --no-dev --no-interaction --optimize-autoloader
-
-# Cache de config e rotas
-RUN php artisan config:cache && php artisan route:cache
-
-# Corrige permissões
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Etapa 2 — Frontend (Node + Vite)
-FROM node:20-bookworm AS frontend
+# ================================
+# Etapa 1: Construção do frontend
+# ================================
+FROM node:20 AS frontend
 
 WORKDIR /app
-COPY --from=backend /var/www/html /app
+COPY package*.json vite.config.* ./
+COPY resources ./resources
+COPY public ./public
 
-RUN npm install && npm run build
+RUN npm ci
+RUN npm run build
 
-# Etapa 3 — Produção (Nginx + PHP-FPM)
-FROM nginx:alpine AS production
+# ================================
+# Etapa 2: Backend Laravel + PHP
+# ================================
+FROM php:8.2-fpm AS production
 
-# Instala PHP no Alpine
-RUN apk add --no-cache php82 php82-fpm php82-opcache php82-pdo php82-pdo_mysql php82-mbstring php82-tokenizer php82-xml php82-gd php82-fileinfo php82-session
+# Instala dependências do sistema
+RUN apt-get update && apt-get install -y \
+    git unzip libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev zip curl nginx \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
+# Define diretório de trabalho
 WORKDIR /var/www/html
 
-# Copia aplicação
-COPY --from=backend /var/www/html ./
+# Copia arquivos do Laravel
+COPY . .
+
+# Copia build do frontend
 COPY --from=frontend /app/public/build ./public/build
 
-# Copia config do Nginx
-COPY ./nginx.conf /etc/nginx/nginx.conf
+# Instala dependências do Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN composer install --no-dev --optimize-autoloader
 
+# Permissões para o Laravel
+RUN chmod -R 775 storage bootstrap/cache && \
+    chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Copia configuração do Nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expõe porta padrão HTTP
 EXPOSE 80
 
-CMD ["sh", "-c", "php-fpm82 -D && nginx -g 'daemon off;'"]
+# Cria script de inicialização
+RUN echo '#!/bin/bash' > /start.sh && \
+    echo 'php artisan config:cache' >> /start.sh && \
+    echo 'php artisan route:cache' >> /start.sh && \
+    echo 'php artisan view:cache' >> /start.sh && \
+    echo 'chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache' >> /start.sh && \
+    echo 'chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache' >> /start.sh && \
+    echo 'service nginx start && php-fpm' >> /start.sh && \
+    chmod +x /start.sh
+
+CMD ["/start.sh"]
