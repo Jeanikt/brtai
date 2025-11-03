@@ -13,14 +13,17 @@ class SendLogToDiscord
         try {
             $level = strtolower($event->level);
 
-            // Define qual webhook será usado
+            // Define o webhook conforme o nível do log
             $webhookUrl = match ($level) {
                 'error', 'critical', 'alert', 'emergency' =>
                 'https://discord.com/api/webhooks/1434564585330835649/mfB_A9IigR8pCgxUxQoJJXWF5b1-KeF0xOUsTSK9rVHkOjpEO0oDfAMdpYS1NlOYSbxC',
+
                 'info', 'notice' =>
                 'https://discord.com/api/webhooks/1434564710359105648/X1gOYhzOwwAM1fcnZK58MTL8cypgQRGs_VGDdmupZHoJWjOQ_pP0wi7MZN41kN6sgzqQ',
+
                 'payment', 'billing', 'transaction' =>
                 'https://discord.com/api/webhooks/1434564823001333791/ZfcIOO_aF0CA4QXc2YyKwrSFsMqUKnMbC58ymkhX37pD2QFi0q8IivFqObkkuOfKfMRg',
+
                 default => env('DISCORD_WEBHOOK_URL'),
             };
 
@@ -29,6 +32,7 @@ class SendLogToDiscord
                 return;
             }
 
+            // Define a cor do embed conforme o nível do log
             $color = match ($level) {
                 'error', 'critical', 'alert', 'emergency' => 0xFF0000,
                 'warning' => 0xFFA500,
@@ -37,6 +41,7 @@ class SendLogToDiscord
                 default => 0x808080,
             };
 
+            // Monta o embed
             $embed = [
                 'title' => '📜 ' . strtoupper($level) . ' Log',
                 'description' => "**Mensagem:**\n```{$event->message}```",
@@ -60,8 +65,12 @@ class SendLogToDiscord
                 'timestamp' => now()->toIso8601String(),
             ];
 
+            // Inclui o contexto, se existir
             if (!empty($event->context)) {
-                $contextJson = json_encode($event->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $contextJson = json_encode(
+                    $event->context,
+                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                );
                 $embed['fields'][] = [
                     'name' => '🧩 Contexto',
                     'value' => "```json\n{$contextJson}\n```",
@@ -69,6 +78,7 @@ class SendLogToDiscord
                 ];
             }
 
+            // Inclui exceção (stack trace)
             if (isset($event->context['exception']) && $event->context['exception'] instanceof \Throwable) {
                 $exception = $event->context['exception'];
                 $embed['fields'][] = [
@@ -83,6 +93,7 @@ class SendLogToDiscord
                 ];
             }
 
+            // Envia para Discord
             Http::withOptions(['verify' => false])
                 ->timeout(5)
                 ->post($webhookUrl, [
@@ -91,7 +102,7 @@ class SendLogToDiscord
                     'embeds' => [$embed],
                 ]);
 
-            // Envia notificação de deploy (se aplicável)
+            // Trigger de deploy (caso mensagem contenha "deploy")
             if ($level === 'info' && str_contains($event->message, 'deploy')) {
                 Http::post(env('DEPLOY_TRIGGER_URL'), [
                     'status' => 'success',

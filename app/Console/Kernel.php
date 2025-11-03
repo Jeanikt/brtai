@@ -7,20 +7,21 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
 {
-    // ✅ Aqui você registra os comandos personalizados
+    // ✅ Registra comandos personalizados
     protected $commands = [
         \App\Console\Commands\TestSupabaseConnection::class,
         \App\Console\Commands\TestDiscordLog::class,
+        \App\Console\Commands\MonitorActiveSessions::class,
     ];
 
     protected function schedule(Schedule $schedule)
     {
-        //
+        // Exemplo: executa a cada hora
+        // $schedule->command('monitor:active-sessions')->hourly();
     }
 
     protected function commands()
     {
-        // ✅ Aqui você só carrega a pasta de comandos
         $this->load(__DIR__ . '/Commands');
     }
 }
