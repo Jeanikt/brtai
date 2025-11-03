@@ -11,6 +11,7 @@ use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Foundation\Application;
@@ -42,6 +43,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
 
+    // 🧠 Roadmap
+    Route::get('/roadmap', [RoadmapController::class, 'index'])->name('roadmap.index');
+    Route::post('/roadmap', [RoadmapController::class, 'store'])->name('roadmap.store');
+    Route::put('/roadmap/{roadmapItem}/status', [RoadmapController::class, 'updateStatus'])->name('roadmap.updateStatus');
+    Route::post('/roadmap/{id}/like', [RoadmapController::class, 'like'])->name('roadmap.like');
+    
     Route::resource('events', EventController::class);
     Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
     Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');

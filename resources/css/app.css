@@ -8,9 +8,7 @@
   font-family: "Prompt", sans-serif;
 }
 
-/* Removido background-image do header pois não é usado no Figma */
-
-/* Melhorias para mobile */
+/* Melhorias mobile */
 @media (max-width: 640px) {
   .min-h-screen {
     min-height: 100vh;
@@ -18,14 +16,14 @@
   }
 }
 
-/* Transições suaves para todos os elementos interativos */
+/* Transições suaves */
 * {
   transition-property: color, background-color, border-color, transform, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease-in-out;
 }
 
-/* Melhorar a aparência dos inputs */
+/* Inputs */
 input {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -37,12 +35,12 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(0, 168, 89, 0.1);
 }
 
-/* Adicionado estilo para botões arredondados do Figma */
+/* Botões arredondados */
 .rounded-full {
   border-radius: 9999px;
 }
 
-/* Garantir que cards tenham cantos bem arredondados */
+/* Cards com cantos arredondados */
 [class*="rounded-[32px]"] {
   border-radius: 32px;
 }
