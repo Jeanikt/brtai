@@ -48,7 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/roadmap', [RoadmapController::class, 'store'])->name('roadmap.store');
     Route::put('/roadmap/{roadmapItem}/status', [RoadmapController::class, 'updateStatus'])->name('roadmap.updateStatus');
     Route::post('/roadmap/{id}/like', [RoadmapController::class, 'like'])->name('roadmap.like');
-    
+
     Route::resource('events', EventController::class);
     Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
     Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');

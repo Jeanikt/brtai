@@ -24,13 +24,23 @@ class StoreEventRequest extends FormRequest
             'theme' => 'nullable|string|max:255',
             'rules' => 'nullable|string',
             'max_participants' => 'nullable|integer|min:1',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|min:0.01',
         ];
     }
 
     public function messages(): array
     {
         return [
+            'name.required' => 'O nome do evento é obrigatório.',
+            'event_date.required' => 'A data do evento é obrigatória.',
+            'event_date.date' => 'A data do evento deve ser uma data válida.',
+            'event_date.after' => 'A data do evento deve ser futura.',
+            'event_time.required' => 'A hora do evento é obrigatória.',
+            'event_time.date_format' => 'A hora do evento deve estar no formato HH:MM.',
+            'location.required' => 'O local do evento é obrigatório.',
+            'price.required' => 'O valor do ingresso é obrigatório.',
+            'price.numeric' => 'O valor do ingresso deve ser um número.',
+            'price.min' => 'O valor do ingresso deve ser maior que zero.',
             'header_image.image' => 'O arquivo deve ser uma imagem válida.',
             'header_image.mimes' => 'A imagem deve ser do tipo: jpeg, png, jpg ou gif.',
             'header_image.max' => 'A imagem não pode ser maior que 5MB.',

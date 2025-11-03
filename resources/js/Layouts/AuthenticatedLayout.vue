@@ -1,15 +1,15 @@
 <template>
     <div class="min-h-screen bg-gray-100 font-prompt">
-        <!-- Navbar -->
-        <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
+        <NotificationContainer ref="notificationContainer" />
+        <LoadingSpinner :show="globalLoading.isLoading.value" :message="globalLoading.loadingMessage.value" />
+
+        <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-40">
             <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
                 <div class="flex justify-between items-center h-16">
-                    <!-- Logo -->
                     <Link :href="route('dashboard')" class="flex items-center">
                     <ApplicationLogo fill="black" class="w-8 h-8 sm:w-10 sm:h-10" />
                     </Link>
 
-                    <!-- Desktop Navigation -->
                     <div class="hidden md:flex items-center gap-5">
                         <span class="text-sm font-medium text-gray-900">
                             {{ $page.props.auth.user.name }}
@@ -36,7 +36,6 @@
                         </button>
                     </div>
 
-                    <!-- Mobile Navigation -->
                     <div class="flex md:hidden items-center gap-3">
                         <Link :href="route('dashboard')"
                             class="bg-[#FFFF00] text-black px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#FFFF33] transition-colors">
@@ -61,7 +60,6 @@
                 </div>
             </div>
 
-            <!-- Dropdown Menu -->
             <transition enter-active-class="transition duration-200 ease-out"
                 enter-from-class="transform opacity-0 -translate-y-2"
                 enter-to-class="transform opacity-100 translate-y-0"
@@ -92,7 +90,6 @@
             </transition>
         </nav>
 
-        <!-- Main content -->
         <main class="pt-20 pb-8">
             <div class="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10">
                 <slot />
@@ -101,44 +98,83 @@
     </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { Link } from '@inertiajs/vue3'
+<script setup lang="ts">
+import { ref, onMounted, provide } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
+import NotificationContainer from '@/Components/NotificationContainer.vue'
+import LoadingSpinner from '@/Components/LoadingSpinner.vue'
+import { useNotifications } from '@/Composables/useNotifications'
+import { useLoading } from '@/Composables/useLoading'
 import axios from 'axios'
 
+interface NotificationContainerInstance {
+    addNotification: (notification: any) => void
+    removeNotification: (id: number) => void
+}
+
 const showingNavigationDropdown = ref(false)
+const notificationContainer = ref<NotificationContainerInstance | null>(null)
+const { setContainer, success, error, warning, info } = useNotifications()
+const globalLoading = useLoading()
+
 const toggleMenu = () => {
     showingNavigationDropdown.value = !showingNavigationDropdown.value
 }
 
 onMounted(async () => {
-    // Envia localização automática ao autenticar
-    if (window.Laravel?.page?.props?.auth?.user) {
-        try {
-            const getLocation = () =>
-                new Promise((resolve) => {
-                    if (!navigator.geolocation) return resolve(null)
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) =>
-                            resolve({
-                                latitude: pos.coords.latitude,
-                                longitude: pos.coords.longitude
-                            }),
-                        () => resolve(null),
-                        { enableHighAccuracy: true, timeout: 5000 }
-                    )
-                })
-
-            const coords = await getLocation()
-            await axios.post('/api/session/location', {
-                latitude: coords?.latitude,
-                longitude: coords?.longitude,
-                user_agent: navigator.userAgent
-            })
-        } catch (error) {
-            console.warn('Falha ao enviar localização:', error)
+    try {
+        if (notificationContainer.value) {
+            setContainer(notificationContainer.value)
         }
+
+        const page = usePage()
+        const flash = (page.props as any).flash
+
+        if (flash?.success) {
+            success(flash.success)
+        }
+        if (flash?.error) {
+            error(flash.error)
+        }
+        if (flash?.warning) {
+            warning(flash.warning)
+        }
+        if (flash?.info) {
+            info(flash.info)
+        }
+
+        if ((window as any).Laravel?.page?.props?.auth?.user) {
+            try {
+                const getLocation = () =>
+                    new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+                        if (!navigator.geolocation) return resolve(null)
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) =>
+                                resolve({
+                                    latitude: pos.coords.latitude,
+                                    longitude: pos.coords.longitude
+                                }),
+                            () => resolve(null),
+                            { enableHighAccuracy: true, timeout: 5000 }
+                        )
+                    })
+
+                const coords = await getLocation()
+                await axios.post('/api/session/location', {
+                    latitude: coords?.latitude,
+                    longitude: coords?.longitude,
+                    user_agent: navigator.userAgent
+                })
+            } catch (err) {
+                console.warn('Falha ao enviar localização:', err)
+            }
+        }
+    } catch (error) {
+        console.error('Erro no mounted hook:', error)
     }
 })
+
+provide('notifications', { success, error, warning, info })
+provide('globalLoading', globalLoading)
 </script>

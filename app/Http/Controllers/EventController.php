@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Carbon\Carbon;
 
 class EventController extends Controller
 {
@@ -106,14 +107,18 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
+        $validated['max_participants'] = isset($validated['max_participants']) ? (int) $validated['max_participants'] : null;
+        $validated['price'] = (float) $validated['price'];
+
         $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+        $carbonDateTime = Carbon::parse($eventDateTime, 'America/Sao_Paulo')->setTimezone('UTC');
 
         $eventData = [
             'organizer_id' => $profile->id,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'slug' => Str::slug($validated['name']) . '-' . Str::random(6),
-            'event_date' => $eventDateTime,
+            'event_date' => $carbonDateTime,
             'location' => $validated['location'],
             'location_reveal_after_payment' => (bool) ($validated['location_reveal_after_payment'] ?? true),
             'theme' => $validated['theme'] ?? null,
@@ -240,10 +245,17 @@ class EventController extends Controller
         $validated = $request->validated();
 
         if (isset($validated['max_participants'])) {
+            $validated['max_participants'] = (int) $validated['max_participants'];
             $validated['max_participants'] = $this->getMaxParticipantsForPlan(
                 $profile->plan_type,
                 $validated['max_participants']
             );
+        }
+
+        if (isset($validated['event_date']) && isset($validated['event_time'])) {
+            $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+            $validated['event_date'] = Carbon::parse($eventDateTime, 'America/Sao_Paulo')->setTimezone('UTC');
+            unset($validated['event_time']);
         }
 
         if (request()->hasFile('header_image')) {

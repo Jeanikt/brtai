@@ -43,7 +43,7 @@ class DashboardController extends Controller
                     'confirmed_count' => $confirmedCount,
                     'pending_count' => $pendingCount,
                     'total_revenue' => $totalRevenue,
-                    'price' => $lowestPrice,
+                    'price' => (float) $lowestPrice, // Garantir que seja float
                     'slug' => $event->slug,
                     'max_participants' => $event->max_participants,
                 ];
