@@ -7,19 +7,35 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
 {
-    // ✅ Registra comandos personalizados
+    /**
+     * ✅ Registra os comandos personalizados do monitoramento
+     */
     protected $commands = [
         \App\Console\Commands\TestSupabaseConnection::class,
         \App\Console\Commands\TestDiscordLog::class,
         \App\Console\Commands\MonitorActiveSessions::class,
+        \App\Console\Commands\DailyDiscordReport::class,
+        \App\Console\Commands\WeeklyGrowthReport::class, // ✅ novo comando semanal
     ];
 
+    /**
+     * 📅 Agenda de execução automática dos comandos
+     */
     protected function schedule(Schedule $schedule)
     {
-        // Exemplo: executa a cada hora
+        // 🔹 Executa relatório diário às 09h00
+        $schedule->command('monitor:daily-report')->dailyAt('09:00');
+
+        // 🔹 Executa o relatório semanal de crescimento aos domingos às 09h00
+        $schedule->command('monitor:weekly-growth')->sundays()->at('09:00');
+
+        // 🔹 (Opcional) monitoramento de sessões a cada hora
         // $schedule->command('monitor:active-sessions')->hourly();
     }
 
+    /**
+     * 🔄 Carrega comandos da pasta App\Console\Commands
+     */
     protected function commands()
     {
         $this->load(__DIR__ . '/Commands');
