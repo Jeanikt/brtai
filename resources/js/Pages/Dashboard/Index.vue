@@ -273,72 +273,69 @@ defineProps({
         type: Number,
         default: 0
     },
-    can_create_event: {
-        type: Boolean,
-        default: true
+    plan: {
+        type: Object,
+        default: () => ({})
+    },
+    stats: {
+        type: Object,
+        default: () => ({})
+    },
+    filters: {
+        type: Object,
+        default: () => ({ filter: 'all' })
     }
 })
 
+const showFilterDropdown = ref(false)
 const showDeleteModal = ref(false)
 const showShareModal = ref(false)
-const showFilterDropdown = ref(false)
 const selectedEvent = ref(null)
 
-const formatEventDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long'
-    }) + ' às ' + date.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'})
+function filterEvents(status) {
+    router.get(route('dashboard'), { filter: status }, { preserveState: true })
+    showFilterDropdown.value = false
 }
 
-const openDeleteModal = (event) => {
+function openDeleteModal(event) {
     selectedEvent.value = event
     showDeleteModal.value = true
 }
 
-const openShareModal = (event) => {
+function deleteEvent() {
+    if (!selectedEvent.value) return
+    router.delete(route('events.destroy', selectedEvent.value.id), {
+        onSuccess: () => (showDeleteModal.value = false)
+    })
+}
+
+function openShareModal(event) {
     selectedEvent.value = event
     showShareModal.value = true
 }
 
-const deleteEvent = () => {
-    if (selectedEvent.value) {
-        router.delete(route('events.destroy', selectedEvent.value.id), {
-            onSuccess: () => {
-                showDeleteModal.value = false
-                selectedEvent.value = null
-                router.reload({ only: ['dashboard'] })
-            }
-        })
-    }
+function formatEventDate(date) {
+    const d = new Date(date)
+    return d.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    })
 }
 
-const filterEvents = (filter) => {
-    showFilterDropdown.value = false
-    route.get(route('dashboard', { filter }))
+// Compartilhamento simplificado (mock)
+function shareToInstagram() {
+    alert('Compartilhar no Instagram (em breve!)')
+}
+function shareToWhatsApp() {
+    const url = `${window.location.origin}/events/${selectedEvent.value.slug}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, '_blank')
+}
+function shareToTikTok() {
+    alert('Compartilhar no TikTok (em breve!)')
 }
 
-const shareToInstagram = () => {
-    window.open(`https://www.instagram.com/`, '_blank')
-}
-
-const shareToWhatsApp = () => {
-    if (selectedEvent.value) {
-        const url = window.location.origin + '/eventos/' + selectedEvent.value.slug
-        const text = `Confira este evento: ${selectedEvent.value.name}`
-        window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank')
-    }
-}
-
-const shareToTikTok = () => {
-    window.open(`https://www.tiktok.com/`, '_blank')
-}
-
-const dismissUpgradeBanner = () => {
-    // Could store in localStorage to persist dismissal
-    localStorage.setItem('upgrade_banner_dismissed', 'true')
+function dismissUpgradeBanner() {
+    localStorage.setItem('hideUpgradeBanner', 'true')
 }
 </script>

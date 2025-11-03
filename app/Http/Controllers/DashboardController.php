@@ -27,16 +27,9 @@ class DashboardController extends Controller
         $events = $query->orderBy('event_date', 'desc')
             ->get()
             ->map(function ($event) {
-                // Calcular preço mais baixo
                 $lowestPrice = $event->priceTiers->min('price') ?? 0;
-
-                // Calcular revenue total (somente participantes pagos)
                 $totalRevenue = $event->confirmedParticipants->sum('payment_amount');
-
-                // Contar participantes confirmados
                 $confirmedCount = $event->confirmedParticipants->count();
-
-                // Contar participantes pendentes
                 $pendingCount = $event->participants()->where('payment_status', 'pending')->count();
 
                 return [
@@ -60,7 +53,6 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->count();
 
-        // Calcular estatísticas totais
         $totalRevenue = $events->sum('total_revenue');
         $totalParticipants = $events->sum('confirmed_count');
         $totalPending = $events->sum('pending_count');
