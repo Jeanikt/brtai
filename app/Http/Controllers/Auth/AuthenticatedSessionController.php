@@ -17,9 +17,6 @@ class AuthenticatedSessionController extends Controller
 {
     private const DISCORD_SESSION_WEBHOOK = 'https://discord.com/api/webhooks/1434919100185841735/zLZIi8emvR1VIpOABUDmv7aS_Qor6MDszoY8-G0XdVlDU1HTzOupAAHd017T_oOLJMxo';
 
-    /**
-     * Exibe o formulário de login (via Inertia)
-     */
     public function create(): Response
     {
         return Inertia::render('Auth/Login', [
@@ -28,9 +25,6 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
-    /**
-     * Login do usuário
-     */
     public function store(Request $request)
     {
         $credentials = $request->validate([
@@ -53,14 +47,10 @@ class AuthenticatedSessionController extends Controller
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
-    /**
-     * Logout do usuário
-     */
     public function destroy(Request $request)
     {
         $user = Auth::user();
         $this->removeActiveSession($user?->id);
-
         $this->sendDiscordSessionLog($request, $user, 'logout');
 
         Auth::guard('web')->logout();
@@ -70,24 +60,19 @@ class AuthenticatedSessionController extends Controller
         return redirect('/');
     }
 
-    /**
-     * === Sessões ativas (Cache) ===
-     */
     private function addActiveSession(string $userId): void
     {
-        $key = 'active_sessions';
-        $sessions = Cache::get($key, []);
+        $sessions = Cache::get('active_sessions', []);
         $sessions[$userId] = now()->toDateTimeString();
-        Cache::put($key, $sessions, 3600);
+        Cache::put('active_sessions', $sessions, 3600);
     }
 
     private function removeActiveSession(?string $userId): void
     {
         if (!$userId) return;
-        $key = 'active_sessions';
-        $sessions = Cache::get($key, []);
+        $sessions = Cache::get('active_sessions', []);
         unset($sessions[$userId]);
-        Cache::put($key, $sessions, 3600);
+        Cache::put('active_sessions', $sessions, 3600);
     }
 
     private function countActiveSessions(): int
@@ -95,13 +80,12 @@ class AuthenticatedSessionController extends Controller
         return count(Cache::get('active_sessions', []));
     }
 
-    /**
-     * === Log para Discord ===
-     */
     private function sendDiscordSessionLog(Request $request, ?User $user, string $action): void
     {
         try {
-            $ip = $request->ip();
+            // ✅ Captura do IP real (prioriza X-Forwarded-For)
+            $ip = $request->header('X-Forwarded-For') ?? $request->ip();
+
             $userAgent = $request->header('User-Agent', 'Desconhecido');
             $browser = $this->detectBrowser($userAgent);
             $os = $this->detectOS($userAgent);
@@ -116,11 +100,11 @@ class AuthenticatedSessionController extends Controller
                 'fields' => [
                     ['name' => '🆔 User ID', 'value' => $user?->id ?? 'Desconhecido', 'inline' => true],
                     ['name' => '👤 Usuário', 'value' => $user?->email ?? 'Desconhecido', 'inline' => true],
-                    ['name' => '📅 Data/Hora', 'value' => now()->toDateTimeString(), 'inline' => true],
                     ['name' => '🌐 IP', 'value' => $ip, 'inline' => true],
-                    ['name' => '🧭 Navegador', 'value' => $browser, 'inline' => true],
                     ['name' => '💻 Sistema Operacional', 'value' => $os, 'inline' => true],
+                    ['name' => '🧭 Navegador', 'value' => $browser, 'inline' => true],
                     ['name' => '👥 Sessões Ativas', 'value' => (string) $activeCount, 'inline' => true],
+                    ['name' => '📅 Data/Hora', 'value' => now()->toDateTimeString(), 'inline' => true],
                 ],
                 'footer' => ['text' => 'BrotaAI • Sessões'],
                 'timestamp' => now()->toIso8601String(),
@@ -146,7 +130,6 @@ class AuthenticatedSessionController extends Controller
             str_contains($ua, 'Chrome') => 'Chrome',
             str_contains($ua, 'Safari') => 'Safari',
             str_contains($ua, 'Firefox') => 'Firefox',
-            str_contains($ua, 'MSIE') || str_contains($ua, 'Trident') => 'Internet Explorer',
             default => 'Outro',
         };
     }

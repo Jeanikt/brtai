@@ -62,10 +62,9 @@ class GoogleAuthController extends Controller
 
     private function addActiveSession(string $userId): void
     {
-        $key = 'active_sessions';
-        $sessions = Cache::get($key, []);
+        $sessions = Cache::get('active_sessions', []);
         $sessions[$userId] = now()->toDateTimeString();
-        Cache::put($key, $sessions, 3600);
+        Cache::put('active_sessions', $sessions, 3600);
     }
 
     private function countActiveSessions(): int
@@ -76,7 +75,9 @@ class GoogleAuthController extends Controller
     private function sendDiscordSessionLog(Request $request, ?User $user, string $action): void
     {
         try {
-            $ip = $request->ip();
+            // ✅ Captura do IP real do usuário
+            $ip = $request->header('X-Forwarded-For') ?? $request->ip();
+
             $userAgent = $request->header('User-Agent', 'Desconhecido');
             $browser = $this->detectBrowser($userAgent);
             $os = $this->detectOS($userAgent);
