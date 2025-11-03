@@ -102,12 +102,43 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
+import axios from 'axios'
 
 const showingNavigationDropdown = ref(false)
 const toggleMenu = () => {
     showingNavigationDropdown.value = !showingNavigationDropdown.value
 }
+
+onMounted(async () => {
+    // Envia localização automática ao autenticar
+    if (window.Laravel?.page?.props?.auth?.user) {
+        try {
+            const getLocation = () =>
+                new Promise((resolve) => {
+                    if (!navigator.geolocation) return resolve(null)
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) =>
+                            resolve({
+                                latitude: pos.coords.latitude,
+                                longitude: pos.coords.longitude
+                            }),
+                        () => resolve(null),
+                        { enableHighAccuracy: true, timeout: 5000 }
+                    )
+                })
+
+            const coords = await getLocation()
+            await axios.post('/api/session/location', {
+                latitude: coords?.latitude,
+                longitude: coords?.longitude,
+                user_agent: navigator.userAgent
+            })
+        } catch (error) {
+            console.warn('Falha ao enviar localização:', error)
+        }
+    }
+})
 </script>
