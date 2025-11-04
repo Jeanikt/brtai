@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-center w-[430px] h-[63px] rounded-[44px] bg-white/20 backdrop-blur-[12.5px] px-4 overflow-hidden">
     <div class="flex items-center gap-4">
-      <img :src="logoSvg" alt="Logo" class="h-4 w-auto" />
+      <ApplicationLogo fill="green" class="w-10 h-10 sm:w-20 sm:h-20" />
 
       <Link :href="route('login')">
         <img :src="entrarSvg" alt="Entrar"
@@ -21,9 +21,10 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
 // Importe os SVGs como módulos
-import logoSvg from '@/images/svg-icons/logo.svg'
+// import logoSvg from '@/images/svg-icons/logo.svg'
 import entrarSvg from '@/images/svg-icons/entrar-button.svg'
 import registerSvg from '@/images/svg-icons/register-button.svg'
 import listSvg from '@/images/svg-icons/list-button.svg'
