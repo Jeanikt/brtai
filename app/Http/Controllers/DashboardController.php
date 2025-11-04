@@ -14,7 +14,7 @@ class DashboardController extends Controller
 
         $profile = $user->profile ?? $user->profile()->create([
             'full_name' => $user->name ?? 'Usuário sem nome',
-            'plan_type' => 'freemium',
+            'plan_type' => $user->profile?->plan_type ?? 'freemium',
         ]);
 
         $query = Event::with(['confirmedParticipants', 'priceTiers', 'participants'])
@@ -43,7 +43,7 @@ class DashboardController extends Controller
                     'confirmed_count' => $confirmedCount,
                     'pending_count' => $pendingCount,
                     'total_revenue' => $totalRevenue,
-                    'price' => (float) $lowestPrice, // Garantir que seja float
+                    'price' => (float) $lowestPrice,
                     'slug' => $event->slug,
                     'max_participants' => $event->max_participants,
                 ];
@@ -53,29 +53,25 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->count();
 
-        $totalRevenue = $events->sum('total_revenue');
-        $totalParticipants = $events->sum('confirmed_count');
-        $totalPending = $events->sum('pending_count');
-
-        $stats = [
-            'total_events' => $events->count(),
-            'total_revenue' => number_format($totalRevenue, 2, ',', '.'),
-            'total_participants' => $totalParticipants,
-            'total_pending' => $totalPending,
-            'upcoming_events' => $events->where('event_date', '>=', now())->count(),
-        ];
+        // Calcular se pode criar evento baseado no plano
+        $canCreateEvent = $this->canCreateEvent($profile->plan_type, $profile->id, $activeEventsCount);
 
         return Inertia::render('Dashboard/Index', [
             'events' => $events,
-            'stats' => $stats,
-            'plan' => [
-                'type' => $profile->plan_type,
-                'event_limit' => $profile->getEventLimit(),
-                'participant_limit' => $profile->getParticipantLimit(),
-                'active_events_count' => $activeEventsCount,
-            ],
+            'user_plan' => $profile->plan_type, // Agora passando user_plan diretamente
+            'active_events_count' => $activeEventsCount,
+            'can_create_event' => $canCreateEvent,
             'filters' => $request->only(['filter'])
         ]);
+    }
+
+    private function canCreateEvent($planType, $userId, $activeEventsCount)
+    {
+        if ($planType === 'freemium') {
+            return $activeEventsCount < 1;
+        }
+
+        return true; // Pro e Enterprise podem criar eventos ilimitados
     }
 
     public function analytics(Request $request)
