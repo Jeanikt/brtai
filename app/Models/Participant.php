@@ -141,4 +141,19 @@ class Participant extends Model
             default => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Desconhecido']
         };
     }
+
+    public function isFreeEvent()
+    {
+        return $this->event->is_free;
+    }
+
+    public function processFreeRegistration()
+    {
+        if ($this->isFreeEvent() && $this->isPending()) {
+            $this->update([
+                'payment_status' => 'paid',
+                'confirmed_at' => now()
+            ]);
+        }
+    }
 }

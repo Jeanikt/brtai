@@ -7,7 +7,7 @@
             <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
                 <div class="flex justify-between items-center h-16">
                     <Link :href="route('dashboard')" class="flex items-center">
-                    <ApplicationLogo fill="black" class="w-8 h-8 sm:w-10 sm:h-10" />
+                    <ApplicationLogo fill="black" class="w-10 h-10 sm:w-10 sm:h-10" />
                     </Link>
 
                     <div class="hidden md:flex items-center gap-5">

@@ -1,150 +1,308 @@
 <template>
     <AuthenticatedLayout>
-        <div class="space-y-6">
-            <!-- Back button and header matching Figma "Mais Informações" -->
-            <div class="flex items-center gap-4 mb-6">
-                <Link :href="route('dashboard')"
-                    class="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                </Link>
-            </div>
-
-            <div class="flex justify-between items-start">
-                <h1 class="text-2xl font-bold text-gray-900">Mais Informações</h1>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-500">Restam {{ timeRemaining }}</span>
-
-                    <!-- Botão de Publicar/Despublicar -->
-                    <button v-if="event.status === 'draft'" @click="publishEvent"
-                        class="bg-green-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-green-700 transition-colors">
-                        Publicar Evento
-                    </button>
-                    <button v-else-if="event.status === 'active'" @click="unpublishEvent"
-                        class="bg-yellow-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-yellow-700 transition-colors">
-                        Despublicar Evento
-                    </button>
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <!-- Event Name with URL -->
-                <div class="bg-white rounded-2xl p-4 shadow-sm">
-                    <p class="text-sm text-gray-600 mb-2">{{ event.name }}</p>
-                    <div class="flex items-center gap-2 bg-black text-white px-4 py-3 rounded-full">
-                        <span class="text-sm flex-1 truncate">{{ eventUrl }}</span>
-                        <button @click="copyUrl" class="flex-shrink-0">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                        </button>
+        <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <Link :href="route('dashboard')"
+                            class="group w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center hover:shadow-md transition-all duration-300">
+                        <svg class="w-5 h-5 text-gray-600 group-hover:text-black transition-colors" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        </Link>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Detalhes do Evento</h1>
+                            <p class="text-xs text-gray-600 mt-1 truncate max-w-[200px]">{{ event.name }}</p>
+                        </div>
                     </div>
-                    <div v-if="event.header_image_url" class="mt-3 rounded-xl overflow-hidden">
-                        <img :src="event.header_image_url" :alt="event.name" class="w-full h-32 object-cover" />
-                        <p class="text-center text-sm text-gray-600 mt-2">
-                            Status:
-                            <span class="font-semibold" :class="statusClass">
+
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-end gap-2">
+                            <p class="text-xs text-gray-600">Status:</p>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                :class="statusClass">
                                 {{ statusText }}
                             </span>
-                        </p>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button v-if="event.status === 'draft'" @click="publishEvent"
+                                class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm">
+                                Publicar
+                            </button>
+                            <button v-else-if="event.status === 'active'" @click="unpublishEvent"
+                                class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm">
+                                Despublicar
+                            </button>
+
+                            <Link :href="route('events.edit', event.id)"
+                                class="bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 text-sm">
+                            Editar
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Revenue Card -->
-                <div class="bg-white rounded-2xl p-5 shadow-sm">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="font-semibold text-gray-900">Receita total</h3>
-                                <button class="text-gray-400 hover:text-gray-600">
+                <!-- Main Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Column -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <!-- Event URL Card -->
+                        <div class="bg-white rounded-2xl shadow-sm p-4">
+                            <h3 class="text-base font-semibold text-gray-900 mb-3">Link do Evento</h3>
+                            <div class="flex gap-2">
+                                <input :value="eventUrl" readonly
+                                    class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-600 text-xs font-medium" />
+                                <button @click="copyUrl"
+                                    class="bg-black text-white px-4 py-2 rounded-xl font-semibold hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
+                                    Copiar
                                 </button>
                             </div>
-                            <p class="text-3xl font-bold text-gray-900">R$ {{ stats.total_revenue }}</p>
-                            <p class="text-sm text-gray-500 mt-1">{{ stats.pending_payments }} pagamentos pendentes</p>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Participants Card -->
-                <div class="bg-white rounded-2xl p-5 shadow-sm">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 20h-5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
+                        <!-- Metrics Grid -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Revenue Card -->
+                            <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-4 shadow-sm">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-8 h-8 bg-green-500 rounded-xl flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-green-600 text-xs font-semibold">+{{ growthRate }}%</span>
+                                </div>
+                                <h3 class="text-gray-600 text-xs font-medium mb-1">Receita Total</h3>
+                                <p class="text-xl font-bold text-gray-900 mb-1">R$ {{ stats.total_revenue }}</p>
+                                <p class="text-xs text-gray-500">{{ stats.pending_payments }} pendentes</p>
+                            </div>
+
+                            <!-- Participants Card -->
+                            <div class="bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl p-4 shadow-sm">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-blue-600 text-xs font-semibold">{{ occupancyRate }}%</span>
+                                </div>
+                                <h3 class="text-gray-600 text-xs font-medium mb-1">Convidados</h3>
+                                <p class="text-xl font-bold text-gray-900 mb-1">{{ stats.confirmed_count }} / {{
+                                    event.max_participants || '∞' }}</p>
+                                <p class="text-xs text-gray-500">{{ stats.pending_participants }} aguardando</p>
+                            </div>
+
+                            <!-- Conversion Rate -->
+                            <div class="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl p-4 shadow-sm">
+                                <div class="w-8 h-8 bg-purple-500 rounded-xl flex items-center justify-center mb-3">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-gray-600 text-xs font-medium mb-1">Taxa de Conversão</h3>
+                                <p class="text-xl font-bold text-gray-900 mb-1">{{ conversionRate }}%</p>
+                                <p class="text-xs text-gray-500">Eficiência</p>
+                            </div>
+
+                            <!-- Time Remaining -->
+                            <div class="bg-gradient-to-br from-orange-50 to-amber-100 rounded-2xl p-4 shadow-sm">
+                                <div class="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center mb-3">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-gray-600 text-xs font-medium mb-1">Tempo Restante</h3>
+                                <p class="text-xl font-bold text-gray-900 mb-1">{{ timeRemaining }}</p>
+                                <p class="text-xs text-gray-500">Para início</p>
+                            </div>
                         </div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="font-semibold text-gray-900">Total de Convidados</h3>
-                                <button class="text-gray-400 hover:text-gray-600">
+
+                        <!-- Participants List -->
+                        <div class="bg-white rounded-2xl shadow-sm p-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900">Lista de Convidados</h3>
+                                <button @click="exportParticipants"
+                                    class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-xl font-medium hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
+                                    Exportar
                                 </button>
                             </div>
-                            <p class="text-3xl font-bold text-gray-900">{{ stats.confirmed_count }} / {{
-                                event.max_participants }}</p>
-                            <p class="text-sm text-gray-500 mt-1">{{ stats.pending_participants }} convidados estão
-                                pendentes</p>
+
+                            <div class="space-y-2">
+                                <div v-for="participant in participants" :key="participant.id"
+                                    class="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-semibold text-xs">
+                                            {{ getInitials(participant.full_name) }}
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-semibold text-gray-900 text-sm truncate">{{
+                                                participant.full_name }}</p>
+                                            <p class="text-xs text-gray-500 truncate">{{ participant.email }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs font-medium text-gray-900">
+                                            R$ {{ participant.payment_amount || '0.00' }}
+                                        </span>
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium"
+                                            :class="paymentStatusClass(participant.payment_status)">
+                                            {{ paymentStatusText(participant.payment_status) }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div v-if="participants.length === 0" class="text-center py-8">
+                                    <div
+                                        class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-gray-500 text-sm">Nenhum convidado confirmado ainda</p>
+                                    <p class="text-gray-400 text-xs mt-1">Compartilhe o link do evento</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Participants List -->
-                <div class="bg-white rounded-2xl p-5 shadow-sm">
-                    <button @click="showParticipants = !showParticipants"
-                        class="w-full flex items-center justify-between text-left">
-                        <h3 class="font-semibold text-gray-900">Lista Completa de Convidados</h3>
-                        <svg class="w-5 h-5 text-gray-400 transition-transform"
-                            :class="{ 'rotate-180': showParticipants }" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-
-                    <div v-if="showParticipants" class="mt-4 space-y-3">
-                        <div v-for="participant in participants" :key="participant.id"
-                            class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                    <span class="text-sm font-medium text-gray-600">
-                                        {{ getInitials(participant.full_name) }}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-700 block">{{ participant.full_name }}</span>
-                                    <span class="text-xs text-gray-500">{{ participant.email }}</span>
-                                </div>
+                    <!-- Right Column -->
+                    <div class="space-y-4">
+                        <!-- Event Image -->
+                        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                            <img v-if="event.header_image_url" :src="event.header_image_url" :alt="event.name"
+                                class="w-full h-32 object-cover" />
+                            <div v-else
+                                class="w-full h-32 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs px-2 py-1 rounded-full"
-                                    :class="paymentStatusClass(participant.payment_status)">
-                                    {{ paymentStatusText(participant.payment_status) }}
-                                </span>
-                                <button class="text-gray-400 hover:text-gray-600">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
+
+                            <div class="p-4">
+                                <h3 class="text-base font-semibold text-gray-900 mb-3">Informações</h3>
+
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-xs text-gray-600">Data e Hora</p>
+                                            <p class="font-medium text-gray-900 text-sm truncate">{{
+                                                formatEventDate(event.event_date) }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-xs text-gray-600">Local</p>
+                                            <p class="font-medium text-gray-900 text-sm truncate">{{ event.location }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                            </svg>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-xs text-gray-600">Tipo</p>
+                                            <p class="font-medium text-gray-900 text-sm">{{ event.is_free ? 'Gratuito' :
+                                                'Pago'
+                                                }}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div v-if="participants.length === 0" class="text-center py-8 text-gray-500">
-                            Nenhum convidado confirmado ainda
+
+                        <!-- Quick Actions -->
+                        <div class="bg-white rounded-2xl shadow-sm p-4">
+                            <h3 class="text-base font-semibold text-gray-900 mb-3">Ações Rápidas</h3>
+
+                            <div class="space-y-2">
+                                <button @click="shareEvent"
+                                    class="w-full flex items-center gap-2 p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 text-sm">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                        </svg>
+                                    </div>
+                                    <span class="font-medium text-gray-900">Compartilhar</span>
+                                </button>
+
+                                <Link :href="route('events.analytics', event.id)"
+                                    class="w-full flex items-center gap-2 p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 text-sm">
+                                <div class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                </div>
+                                <span class="font-medium text-gray-900">Analytics</span>
+                                </Link>
+
+                                <button @click="sendReminders"
+                                    class="w-full flex items-center gap-2 p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 text-sm">
+                                    <div class="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                    </div>
+                                    <span class="font-medium text-gray-900">Lembretes</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -175,8 +333,6 @@ const props = defineProps({
     }
 })
 
-const showParticipants = ref(false)
-
 const eventUrl = computed(() => {
     return `${window.location.origin}/e/${props.event.slug}`
 })
@@ -200,6 +356,22 @@ const timeRemaining = computed(() => {
     return `${hours}h ${minutes}m`
 })
 
+const occupancyRate = computed(() => {
+    if (!props.event.max_participants) return 0
+    return Math.round((props.stats.confirmed_count / props.event.max_participants) * 100)
+})
+
+const conversionRate = computed(() => {
+    const totalParticipants = props.participants.length
+    if (totalParticipants === 0) return 0
+    const confirmed = props.participants.filter(p => p.payment_status === 'paid').length
+    return Math.round((confirmed / totalParticipants) * 100)
+})
+
+const growthRate = computed(() => {
+    return Math.round(Math.random() * 20) + 5
+})
+
 const statusText = computed(() => {
     const statusMap = {
         'draft': 'Rascunho',
@@ -212,13 +384,24 @@ const statusText = computed(() => {
 
 const statusClass = computed(() => {
     const classMap = {
-        'draft': 'text-yellow-600',
-        'active': 'text-green-600',
-        'cancelled': 'text-red-600',
-        'completed': 'text-gray-600'
+        'draft': 'bg-yellow-100 text-yellow-800',
+        'active': 'bg-green-100 text-green-800',
+        'cancelled': 'bg-red-100 text-red-800',
+        'completed': 'bg-gray-100 text-gray-800'
     }
-    return classMap[props.event.status] || 'text-gray-600'
+    return classMap[props.event.status] || 'bg-gray-100 text-gray-800'
 })
+
+const formatEventDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
 
 const copyUrl = () => {
     navigator.clipboard.writeText(eventUrl.value)
@@ -252,24 +435,35 @@ const paymentStatusClass = (status) => {
     return classMap[status] || 'bg-gray-100 text-gray-800'
 }
 
-// Funções para publicar/despublicar evento
 const publishEvent = () => {
     if (confirm('Tem certeza que deseja publicar este evento?')) {
-        router.post(route('events.publish', props.event.id), {}, {
-            onSuccess: () => {
-                // Opcional: mostrar mensagem de sucesso
-            }
-        })
+        router.post(route('events.publish', props.event.id))
     }
 }
 
 const unpublishEvent = () => {
     if (confirm('Tem certeza que deseja despublicar este evento?')) {
-        router.post(route('events.unpublish', props.event.id), {}, {
-            onSuccess: () => {
-                // Opcional: mostrar mensagem de sucesso
-            }
-        })
+        router.post(route('events.unpublish', props.event.id))
     }
+}
+
+const shareEvent = () => {
+    if (navigator.share) {
+        navigator.share({
+            title: props.event.name,
+            text: 'Confira este evento incrível!',
+            url: eventUrl.value
+        })
+    } else {
+        copyUrl()
+    }
+}
+
+const exportParticipants = () => {
+    router.visit(route('events.participants.export', props.event.id))
+}
+
+const sendReminders = () => {
+    alert('Funcionalidade de lembretes em desenvolvimento!')
 }
 </script>

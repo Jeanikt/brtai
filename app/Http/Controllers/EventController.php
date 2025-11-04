@@ -107,8 +107,19 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
+        if (isset($validated['is_free']) && $validated['is_free'] && $profile->plan_type !== 'pro') {
+            return redirect()->back()->withErrors([
+                'is_free' => 'Eventos gratuitos são exclusivos do plano Pro.'
+            ]);
+        }
+
         $validated['max_participants'] = isset($validated['max_participants']) ? (int) $validated['max_participants'] : null;
-        $validated['price'] = (float) $validated['price'];
+
+        if (isset($validated['is_free']) && $validated['is_free']) {
+            $validated['price'] = 0;
+        } else {
+            $validated['price'] = (float) $validated['price'];
+        }
 
         $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
         $carbonDateTime = Carbon::parse($eventDateTime, 'America/Sao_Paulo')->setTimezone('UTC');
@@ -126,6 +137,7 @@ class EventController extends Controller
             'max_participants' => $this->getMaxParticipantsForPlan($profile->plan_type, $validated['max_participants'] ?? null),
             'status' => 'draft',
             'is_public' => true,
+            'is_free' => (bool) ($validated['is_free'] ?? false),
         ];
 
         if (request()->hasFile('header_image')) {
@@ -212,6 +224,7 @@ class EventController extends Controller
                 'max_participants' => $event->max_participants,
                 'status' => $event->status,
                 'is_public' => $event->is_public,
+                'is_free' => $event->is_free,
             ],
             'participants' => $participants,
             'stats' => $stats,
@@ -400,7 +413,7 @@ class EventController extends Controller
 
     private function createPriceTiers(Event $event, array $validated)
     {
-        $price = $validated['price'] ?? 30.00;
+        $price = $validated['price'] ?? 0.00;
 
         PriceTier::create([
             'event_id' => $event->id,

@@ -40,6 +40,24 @@
                     <div v-if="form.errors.name" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.name }}</div>
                 </div>
 
+                <div v-if="user_plan === 'pro'" class="flex justify-between items-center p-4 bg-gray-200 rounded-2xl">
+                    <!-- Esquerda: checkbox + label -->
+                    <div class="flex items-center gap-2">
+                        <input v-model="form.is_free" type="checkbox" id="is_free"
+                            class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2" />
+                        <label for="is_free" class="text-sm text-gray-700 font-medium">
+                            Evento gratuito
+                        </label>
+                    </div>
+
+                    <!-- Direita: texto explicativo -->
+                    <div class="text-xs text-gray-500 text-right">
+                        Qualquer pessoa com o link pode entrar <br />
+                        até atingir o limite máximo de convidados
+                    </div>
+                </div>
+
+
                 <div class="grid grid-cols-2 gap-3">
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -97,10 +115,11 @@
                                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </div>
-                        <input v-model="form.price" type="number" step="0.01" placeholder="Valor por Pessoa" required
-                            @input="updateCalculations" :class="[
+                        <input v-model="form.price" type="number" step="0.01" placeholder="Valor por Pessoa"
+                            :required="!form.is_free" :disabled="form.is_free" @input="updateCalculations" :class="[
                                 'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400',
-                                form.errors.price ? 'ring-2 ring-red-500' : ''
+                                form.errors.price ? 'ring-2 ring-red-500' : '',
+                                form.is_free ? 'opacity-50 cursor-not-allowed' : ''
                             ]" />
                         <div v-if="form.errors.price" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.price }}
                         </div>
@@ -123,6 +142,18 @@
                             <ProBadge />
                         </div>
                     </div>
+                </div>
+
+                <div v-if="user_plan !== 'pro' && form.is_free"
+                    class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Apenas para plano Pro:</strong> Eventos gratuitos estão disponíveis apenas para usuários
+                        do plano Pro.
+                        <Link :href="route('settings.billing')"
+                            class="font-semibold underline hover:text-yellow-900 ml-1">
+                        Fazer upgrade
+                        </Link>
+                    </p>
                 </div>
 
                 <ParticipantLimitWarning v-if="user_plan === 'freemium' && form.max_participants"
@@ -174,7 +205,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import UpgradeProBanner from '@/Components/UpgradeProBanner.vue'
@@ -196,6 +227,7 @@ interface EventForm {
     price: string
     max_participants: string
     header_image: File | null
+    is_free: boolean
 }
 
 const form = useForm<EventForm>({
@@ -205,7 +237,8 @@ const form = useForm<EventForm>({
     location: '',
     price: '',
     max_participants: '',
-    header_image: null
+    header_image: null,
+    is_free: false
 })
 
 const imagePreview = ref<string | null>(null)
@@ -217,6 +250,14 @@ const participantsNumber = computed(() => {
 
 const ticketPriceNumber = computed(() => {
     return parseFloat(form.price) || 0
+})
+
+watch(() => form.is_free, (newValue) => {
+    if (newValue) {
+        form.price = '0'
+    } else {
+        form.price = ''
+    }
 })
 
 const goBack = () => router.visit('/dashboard')
@@ -249,8 +290,18 @@ const updateCalculations = () => {
 }
 
 const submit = () => {
-    if (!form.name || !form.event_date || !form.event_time || !form.location || !form.price) {
+    if (form.is_free && props.user_plan !== 'pro') {
+        alert('Eventos gratuitos são exclusivos do plano Pro. Faça upgrade para utilizar esta funcionalidade.')
+        return
+    }
+
+    if (!form.name || !form.event_date || !form.event_time || !form.location) {
         alert('Por favor, preencha todos os campos obrigatórios.')
+        return
+    }
+
+    if (!form.is_free && !form.price) {
+        alert('Por favor, informe o valor por pessoa ou marque como evento gratuito.')
         return
     }
 

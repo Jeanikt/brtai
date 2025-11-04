@@ -55,39 +55,68 @@
                 </div>
             </div>
 
-            <!-- Barra de Filtros Compacta -->
-            <div class="flex items-center gap-3 bg-white rounded-2xl p-3 border border-gray-200">
-                <div class="relative flex-1 max-w-xs">
-                    <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Barra de Filtros Melhorada -->
+            <div class="flex items-center gap-4 bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+                <!-- Busca -->
+                <div class="relative flex-1 max-w-md">
+                    <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
-                    <input type="text" placeholder="Buscar eventos..."
-                        class="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border-0 text-sm focus:ring-2 focus:ring-gray-200" />
+                    <input type="text" placeholder="Buscar eventos por nome, local ou descrição..."
+                        class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-xl border-0 text-sm focus:ring-2 focus:ring-black focus:bg-white transition-all duration-200 placeholder-gray-500" />
                 </div>
 
+                <!-- Separador Visual -->
+                <div class="h-8 w-px bg-gray-300"></div>
+
+                <!-- Filtro de Status -->
                 <div class="relative">
                     <button @click="showFilterDropdown = !showFilterDropdown"
-                        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm">
-                        <span class="text-gray-700">Filtrar</span>
-                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700 border border-transparent hover:border-gray-300 min-w-[120px] justify-between">
+                        <span>{{ getCurrentFilterLabel() }}</span>
+                        <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" :class="{ 'rotate-180': showFilterDropdown }"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    <!-- Dropdown de Filtros -->
+                    <!-- Dropdown de Filtros Melhorado -->
                     <div v-if="showFilterDropdown"
-                        class="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-10">
-                        <button v-for="filter in filters" :key="filter.value" @click="filterEvents(filter.value)"
-                            class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">
-                            {{ filter.label }}
+                        class="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-20 backdrop-blur-sm bg-white/95">
+                        <div class="px-3 py-2 border-b border-gray-100">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtrar por status</p>
+                        </div>
+                        <button v-for="filter in filters" :key="filter.value"
+                            @click="filterEvents(filter.value)"
+                            :class="[
+                                'w-full text-left px-4 py-3 text-sm transition-colors duration-150 flex items-center gap-3',
+                                currentFilter === filter.value
+                                    ? 'bg-black text-white font-medium'
+                                    : 'text-gray-700 hover:bg-gray-50'
+                            ]">
+                            <div :class="[
+                                'w-2 h-2 rounded-full',
+                                currentFilter === filter.value ? 'bg-white' : getStatusColor(filter.value)
+                            ]"></div>
+                            <span>{{ filter.label }}</span>
                         </button>
                     </div>
                 </div>
+
+                <!-- Botão de Ordenação -->
+                <button class="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                    </svg>
+                    <span>Ordenar</span>
+                </button>
             </div>
 
+            <!-- Resto do código permanece igual -->
             <!-- Grid de Eventos -->
             <div v-if="events.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Cards de Evento Existentes -->
@@ -156,7 +185,7 @@
                             <div class="flex items-center gap-1 text-xs text-gray-600">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <span>R$ {{ formatPrice(event.price) }}</span>
                             </div>
@@ -307,7 +336,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Link, router } from '@inertiajs/vue3'
 import UpgradeProBanner from '@/Components/UpgradeProBanner.vue'
@@ -335,6 +364,7 @@ const showFilterDropdown = ref(false)
 const showDeleteModal = ref(false)
 const showShareModal = ref(false)
 const selectedEvent = ref(null)
+const currentFilter = ref('all')
 
 const filters = [
     { label: 'Todos os Eventos', value: 'all' },
@@ -345,8 +375,25 @@ const filters = [
 ]
 
 function filterEvents(status) {
+    currentFilter.value = status
     router.get(route('dashboard'), { filter: status }, { preserveState: true })
     showFilterDropdown.value = false
+}
+
+function getCurrentFilterLabel() {
+    const filter = filters.find(f => f.value === currentFilter.value)
+    return filter ? filter.label : 'Filtrar'
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'active': 'bg-green-500',
+        'draft': 'bg-yellow-500',
+        'finished': 'bg-gray-500',
+        'cancelled': 'bg-red-500',
+        'all': 'bg-blue-500'
+    }
+    return colors[status] || 'bg-gray-400'
 }
 
 function openDeleteModal(event) {
@@ -376,7 +423,6 @@ function formatEventDate(date) {
 }
 
 function formatPrice(price) {
-    // Garantir que o preço seja tratado como número
     const numericPrice = Number(price) || 0
     return numericPrice.toFixed(2)
 }

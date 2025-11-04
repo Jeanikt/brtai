@@ -43,7 +43,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
 
-    // 🧠 Roadmap
     Route::get('/roadmap', [RoadmapController::class, 'index'])->name('roadmap.index');
     Route::post('/roadmap', [RoadmapController::class, 'store'])->name('roadmap.store');
     Route::put('/roadmap/{roadmapItem}/status', [RoadmapController::class, 'updateStatus'])->name('roadmap.updateStatus');

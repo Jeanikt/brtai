@@ -1,7 +1,6 @@
 <template>
     <AuthenticatedLayout>
-        <div class="space-y-6">
-            <!-- Back button and header -->
+        <div class="space-y-6 max-w-2xl mx-auto px-4">
             <div class="flex items-center gap-4 mb-6">
                 <button @click="goBack"
                     class="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors">
@@ -11,14 +10,22 @@
                 </button>
             </div>
 
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Editar Evento</h1>
-                <p class="text-sm text-gray-600 mt-1">Edite os detalhes da sua resenha.</p>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Editar Evento</h1>
+                    <p class="text-sm text-gray-600 mt-1">Atualize os detalhes da sua resenha.</p>
+                </div>
             </div>
 
-            <!-- Form -->
+            <UpgradeProBanner v-if="user_plan === 'freemium'" title="Maximize Seus Ganhos com o Plano Pro!"
+                :estimated-participants="participantsNumber" :ticket-price="ticketPriceNumber" :show-savings="true"
+                class="mb-6" />
+
+            <SimpleRevenueCalculator :user_plan="user_plan" :participants="participantsNumber"
+                :ticket-price="ticketPriceNumber" />
+
             <form @submit.prevent="submit" class="space-y-4">
-                <!-- Title Input -->
+                <!-- Nome do Evento -->
                 <div class="relative">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,11 +33,29 @@
                                 d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                         </svg>
                     </div>
-                    <input v-model="form.name" type="text" placeholder="Título do Evento" required
-                        class="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400" />
+                    <input v-model="form.name" type="text" placeholder="Título do Evento" required :class="[
+                        'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400',
+                        form.errors.name ? 'ring-2 ring-red-500' : ''
+                    ]" />
+                    <div v-if="form.errors.name" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.name }}</div>
                 </div>
 
-                <!-- Date and Time Row -->
+                <!-- Evento Gratuito (apenas para Pro) -->
+                <div v-if="user_plan === 'pro'" class="flex justify-between items-center p-4 bg-gray-200 rounded-2xl">
+                    <div class="flex items-center gap-2">
+                        <input v-model="form.is_free" type="checkbox" id="is_free"
+                            class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2" />
+                        <label for="is_free" class="text-sm text-gray-700 font-medium">
+                            Evento gratuito
+                        </label>
+                    </div>
+                    <div class="text-xs text-gray-500 text-right">
+                        Qualquer pessoa com o link pode entrar <br />
+                        até atingir o limite máximo de convidados
+                    </div>
+                </div>
+
+                <!-- Data e Hora -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -39,22 +64,31 @@
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
-                        <input v-model="form.event_date" type="date" required
-                            class="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900" />
+                        <input v-model="form.event_date" type="date" required :class="[
+                            'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900',
+                            form.errors.event_date ? 'ring-2 ring-red-500' : ''
+                        ]" />
+                        <div v-if="form.errors.event_date" class="text-red-500 text-xs mt-1 ml-12">{{
+                            form.errors.event_date }}</div>
                     </div>
+
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <input v-model="form.event_time" type="time" required
-                            class="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900" />
+                        <input v-model="form.event_time" type="time" required :class="[
+                            'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900',
+                            form.errors.event_time ? 'ring-2 ring-red-500' : ''
+                        ]" />
+                        <div v-if="form.errors.event_time" class="text-red-500 text-xs mt-1 ml-12">{{
+                            form.errors.event_time }}</div>
                     </div>
                 </div>
 
-                <!-- Location Input -->
+                <!-- Local -->
                 <div class="relative">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,77 +98,110 @@
                                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                     </div>
-                    <input v-model="form.location" type="text" placeholder="Local" required
-                        class="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400" />
+                    <input v-model="form.location" type="text" placeholder="Local" required :class="[
+                        'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400',
+                        form.errors.location ? 'ring-2 ring-red-500' : ''
+                    ]" />
+                    <div v-if="form.errors.location" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.location }}
+                    </div>
                 </div>
 
-                <!-- Price and Guests Row -->
+                <!-- Preço e Número de Participantes -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </div>
-                        <input v-model="form.price" type="number" step="0.01" placeholder="Valor por Pessoa" required
-                            class="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400" />
+                        <input v-model="form.price" type="number" step="0.01" placeholder="Valor por Pessoa"
+                            :required="!form.is_free" :disabled="form.is_free" @input="updateCalculations" :class="[
+                                'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400',
+                                form.errors.price ? 'ring-2 ring-red-500' : '',
+                                form.is_free ? 'opacity-50 cursor-not-allowed' : ''
+                            ]" />
+                        <div v-if="form.errors.price" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.price }}
+                        </div>
                     </div>
+
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </div>
                         <input v-model="form.max_participants" type="number" placeholder="Convidados"
-                            class="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400" />
+                            :max="user_plan === 'freemium' ? 70 : 500" @input="updateCalculations" :class="[
+                                'w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-gray-300 text-gray-900 placeholder-gray-400',
+                                form.errors.max_participants ? 'ring-2 ring-red-500' : ''
+                            ]" />
+                        <div v-if="user_plan === 'freemium' && participantsNumber > 70"
+                            class="absolute right-4 top-1/2 -translate-y-1/2">
+                            <ProBadge />
+                        </div>
                     </div>
                 </div>
 
-                <!-- Image Upload/Preview Area -->
-                <div class="relative bg-gray-100 rounded-2xl overflow-hidden">
-                    <div v-if="imagePreview || event.header_image_url" class="relative h-64">
-                        <img :src="imagePreview || event.header_image_url" alt="Event image"
-                            class="w-full h-full object-cover" />
-                        <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                            <button type="button" @click="$refs.fileInput.click()"
-                                class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                                <span>Aperte para carregar outra foto.</span>
-                            </button>
-                        </div>
-                        <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">PNG, JPG ou WEBP (MAX.
-                            5MB)</p>
-                    </div>
-                    <div v-else class="p-12 text-center border-2 border-dashed border-gray-300 cursor-pointer"
-                        @click="$refs.fileInput.click()">
-                        <div class="space-y-3">
-                            <div class="flex justify-center">
-                                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-gray-600 font-medium">Aperte para fazer upload ou arraste</p>
-                                <p class="text-sm text-gray-500 mt-1">PNG, JPG ou WEBP (MAX. 5MB)</p>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Aviso para não Pro tentando criar evento gratuito -->
+                <div v-if="user_plan !== 'pro' && form.is_free"
+                    class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Apenas para plano Pro:</strong> Eventos gratuitos estão disponíveis apenas para usuários
+                        do plano Pro.
+                        <Link :href="route('settings.billing')"
+                            class="font-semibold underline hover:text-yellow-900 ml-1">
+                        Fazer upgrade
+                        </Link>
+                    </p>
+                </div>
+
+                <!-- Aviso de limite de participantes para Free -->
+                <ParticipantLimitWarning v-if="user_plan === 'freemium' && form.max_participants"
+                    :current-participants="participantsNumber" :max-participants="70" :ticket-price="ticketPriceNumber"
+                    :user-plan="user_plan" />
+
+                <!-- Upload de Imagem -->
+                <div class="relative bg-gray-100 rounded-2xl p-6 text-center border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer"
+                    @click="fileInput?.click()">
                     <input ref="fileInput" type="file" accept="image/*" @change="handleFileUpload" class="hidden" />
+                    <div v-if="!imagePreview && !event.header_image_url" class="space-y-3">
+                        <svg class="w-12 h-12 text-gray-400 mx-auto" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <div>
+                            <p class="text-gray-600 font-medium">Aperte para fazer upload ou arraste</p>
+                            <p class="text-sm text-gray-500 mt-1">PNG, JPG ou WEBP (MAX. 5MB)</p>
+                        </div>
+                    </div>
+                    <div v-else class="relative">
+                        <img :src="imagePreview || event.header_image_url" alt="Preview"
+                            class="max-h-48 mx-auto rounded-lg" />
+                        <button type="button" @click.stop="removeImage"
+                            class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Submit Button -->
+                <!-- Botão de Submissão -->
                 <button type="submit" :disabled="form.processing"
                     class="w-full bg-black text-white py-4 rounded-full font-bold text-base hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                    <span>Finalizar Edição</span>
-                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span>{{ form.processing ? 'Atualizando...' : 'Atualizar Evento' }}</span>
+                    <svg v-if="!form.processing" class="w-5 h-5 text-green-400" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <svg v-else class="w-5 h-5 text-green-400 animate-spin" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 2v4m0 12v4m8-10h-4M6 12H2" />
                     </svg>
                 </button>
             </form>
@@ -142,46 +209,176 @@
     </AuthenticatedLayout>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import UpgradeProBanner from '@/Components/UpgradeProBanner.vue'
+import ParticipantLimitWarning from '@/Components/ParticipantLimitWarning.vue'
+import ProBadge from '@/Components/ProBadge.vue'
+import SimpleRevenueCalculator from '@/Components/SimpleRevenueCalculator.vue'
 
-const props = defineProps({
-    event: Object
-})
-
-const form = useForm({
-    name: props.event.name,
-    event_date: props.event.event_date,
-    event_time: props.event.event_time,
-    location: props.event.location,
-    price: props.event.price || '',
-    max_participants: props.event.max_participants || '',
-    header_image: null
-})
-
-const imagePreview = ref(null)
-
-const goBack = () => {
-    router.visit(`/events/${props.event.id}`)
+interface PriceTier {
+    id: string;
+    name: string;
+    price: number;
+    max_quantity?: number;
+    current_quantity: number;
+    is_active: boolean;
 }
 
-const handleFileUpload = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-        form.header_image = file
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            imagePreview.value = e.target.result
-        }
-        reader.readAsDataURL(file)
+interface Event {
+    id: string;
+    name: string;
+    event_date: string;
+    location: string;
+    header_image_url?: string;
+    price_tiers: PriceTier[];
+    max_participants?: number;
+    is_free: boolean;
+}
+
+interface Props {
+    event: Event;
+    user_plan: string;
+}
+
+const props = defineProps<Props>()
+
+interface EventForm {
+    name: string;
+    event_date: string;
+    event_time: string;
+    location: string;
+    price: string;
+    max_participants: string;
+    header_image: File | null;
+    is_free: boolean;
+    _method: string;
+}
+
+// Helper function to safely format the event date
+const formatEventDate = (dateString: string): string => {
+    if (!dateString) return '';
+
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+
+        return date.toISOString().split('T')[0];
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return '';
     }
 }
 
+// Helper function to safely format the event time
+const formatEventTime = (dateString: string): string => {
+    if (!dateString) return '';
+
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+
+        return date.toTimeString().slice(0, 5);
+    } catch (error) {
+        console.error('Error formatting time:', error);
+        return '';
+    }
+}
+
+// Helper function to get the first price tier price
+const getFirstPriceTierPrice = (priceTiers: PriceTier[]): string => {
+    if (!priceTiers || priceTiers.length === 0) return '';
+    return priceTiers[0]?.price?.toString() || '';
+}
+
+const form = useForm<EventForm>({
+    name: props.event.name || '',
+    event_date: formatEventDate(props.event.event_date),
+    event_time: formatEventTime(props.event.event_date),
+    location: props.event.location || '',
+    price: getFirstPriceTierPrice(props.event.price_tiers),
+    max_participants: props.event.max_participants?.toString() || '',
+    header_image: null,
+    is_free: props.event.is_free || false,
+    _method: 'PUT'
+})
+
+const imagePreview = ref<string | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const participantsNumber = computed(() => {
+    return parseInt(form.max_participants) || 0
+})
+
+const ticketPriceNumber = computed(() => {
+    return parseFloat(form.price) || 0
+})
+
+watch(() => form.is_free, (newValue) => {
+    if (newValue) {
+        form.price = '0'
+    } else if (form.price === '0') {
+        form.price = getFirstPriceTierPrice(props.event.price_tiers)
+    }
+})
+
+const goBack = () => router.visit(`/events/${props.event.id}`)
+
+const handleFileUpload = (event: Event & { target: HTMLInputElement }) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Arquivo muito grande. O tamanho máximo é 5MB.')
+        return
+    }
+
+    form.header_image = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        imagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+}
+
+const removeImage = () => {
+    form.header_image = null
+    imagePreview.value = null
+    if (fileInput.value) {
+        fileInput.value.value = ''
+    }
+}
+
+const updateCalculations = () => {
+    // Lógica para atualizar cálculos se necessário
+}
+
 const submit = () => {
+    if (form.is_free && props.user_plan !== 'pro') {
+        alert('Eventos gratuitos são exclusivos do plano Pro. Faça upgrade para utilizar esta funcionalidade.')
+        return
+    }
+
+    if (!form.name || !form.event_date || !form.event_time || !form.location) {
+        alert('Por favor, preencha todos os campos obrigatórios.')
+        return
+    }
+
+    if (!form.is_free && !form.price) {
+        alert('Por favor, informe o valor por pessoa ou marque como evento gratuito.')
+        return
+    }
+
     form.post(`/events/${props.event.id}`, {
-        forceFormData: true
+        forceFormData: true,
+        onSuccess: () => {
+            router.visit(`/events/${props.event.id}`, { preserveScroll: true })
+        },
+        onError: (errors) => {
+            console.error('Erros do formulário:', errors)
+        }
     })
 }
 </script>

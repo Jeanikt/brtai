@@ -27,6 +27,7 @@ class Event extends Model
         'max_participants',
         'status',
         'is_public',
+        'is_free',
         'metadata'
     ];
 
@@ -34,6 +35,7 @@ class Event extends Model
         'event_date' => 'datetime',
         'location_reveal_after_payment' => 'boolean',
         'is_public' => 'boolean',
+        'is_free' => 'boolean',
         'metadata' => 'array'
     ];
 
@@ -114,5 +116,20 @@ class Event extends Model
         if ($this->max_participants === null) return null;
 
         return $this->max_participants - $this->confirmed_count;
+    }
+
+    public function isFree()
+    {
+        return $this->is_free === true;
+    }
+
+    public function scopeFree($query)
+    {
+        return $query->where('is_free', true);
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('is_free', false);
     }
 }

@@ -20,7 +20,6 @@ class EventPublicController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        // Verificar se o evento está ativo ou se é público
         if ($event->status !== 'active' && !$event->is_public) {
             abort(404, 'Evento não encontrado.');
         }
@@ -93,6 +92,9 @@ class EventPublicController extends Controller
             ]);
         }
 
+        $paymentStatus = $event->is_free ? 'paid' : 'pending';
+        $confirmedAt = $event->is_free ? now() : null;
+
         $participant = Participant::create([
             'event_id' => $event->id,
             'price_tier_id' => $priceTier->id,
@@ -100,10 +102,15 @@ class EventPublicController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'payment_amount' => $priceTier->price,
-            'payment_status' => 'pending',
+            'payment_status' => $paymentStatus,
+            'confirmed_at' => $confirmedAt,
         ]);
 
         $priceTier->increment('current_quantity');
+
+        if ($event->is_free) {
+            return redirect()->route('payment.success', $participant->id);
+        }
 
         return redirect()->route('payment.checkout', $participant->id);
     }
