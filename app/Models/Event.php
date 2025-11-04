@@ -28,7 +28,9 @@ class Event extends Model
         'status',
         'is_public',
         'is_free',
-        'metadata'
+        'latitude',
+        'longitude',
+        'metadata',
     ];
 
     protected $casts = [
@@ -36,7 +38,9 @@ class Event extends Model
         'location_reveal_after_payment' => 'boolean',
         'is_public' => 'boolean',
         'is_free' => 'boolean',
-        'metadata' => 'array'
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
+        'metadata' => 'array',
     ];
 
     protected static function booted()
@@ -51,6 +55,7 @@ class Event extends Model
         });
     }
 
+    // 🧩 Relationships
     public function organizer()
     {
         return $this->belongsTo(Profile::class, 'organizer_id');
@@ -81,6 +86,7 @@ class Event extends Model
         return $this->hasMany(AISuggestion::class);
     }
 
+    // 💰 Estatísticas e atributos dinâmicos
     public function getTotalRevenueAttribute()
     {
         return $this->confirmedParticipants()->sum('payment_amount');
@@ -99,6 +105,7 @@ class Event extends Model
         return ($this->confirmed_count / $totalParticipants) * 100;
     }
 
+    // ⚙️ Lógica de status e capacidade
     public function isActive()
     {
         return $this->status === 'active' && $this->event_date > now();
@@ -106,18 +113,24 @@ class Event extends Model
 
     public function canAcceptMoreParticipants()
     {
-        if ($this->max_participants === null) return true;
+        if (is_null($this->max_participants)) {
+            return true;
+        }
 
         return $this->confirmed_count < $this->max_participants;
     }
 
     public function getAvailableSlots()
     {
-        if ($this->max_participants === null) return null;
+        if (is_null($this->max_participants)) {
+            return null;
+        }
 
-        return $this->max_participants - $this->confirmed_count;
+        $confirmedCount = $this->confirmedParticipants()->count();
+        return max(0, $this->max_participants - $confirmedCount);
     }
 
+    // 🎟️ Helpers e Scopes
     public function isFree()
     {
         return $this->is_free === true;

@@ -16,6 +16,7 @@ class Participant extends Model
     protected $fillable = [
         'event_id',
         'price_tier_id',
+        'profile_id',
         'full_name',
         'email',
         'phone',
@@ -26,7 +27,7 @@ class Participant extends Model
         'pix_expires_at',
         'confirmed_at',
         'checked_in_at',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
@@ -34,7 +35,7 @@ class Participant extends Model
         'pix_expires_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'checked_in_at' => 'datetime',
-        'metadata' => 'array'
+        'metadata' => 'array',
     ];
 
     protected static function booted()
@@ -46,6 +47,7 @@ class Participant extends Model
         });
     }
 
+    /** 🔗 Relationships **/
     public function event()
     {
         return $this->belongsTo(Event::class);
@@ -56,44 +58,38 @@ class Participant extends Model
         return $this->belongsTo(PriceTier::class);
     }
 
-    public function paymentTransactions()
+    public function userProfile()
     {
-        return $this->hasMany(PaymentTransaction::class);
+        return $this->belongsTo(Profile::class, 'profile_id');
     }
 
-    public function notifications()
+    /** 🎯 Scopes **/
+    public function scopeConfirmed($query)
     {
-        return $this->hasMany(Notification::class);
+        return $query->where('payment_status', 'paid')
+            ->whereNotNull('confirmed_at');
     }
 
-    public function scopePaid($query)
+    public function scopeForFinishedEvents($query)
     {
-        return $query->where('payment_status', 'paid');
+        return $query->whereHas('event', function ($q) {
+            $q->where('event_date', '<', now())
+                ->orWhere('status', 'completed');
+        });
     }
 
-    public function scopePending($query)
-    {
-        return $query->where('payment_status', 'pending');
-    }
-
-    public function scopeFailed($query)
-    {
-        return $query->where('payment_status', 'failed');
-    }
-
+    /** 💳 Actions **/
     public function markAsPaid()
     {
         $this->update([
             'payment_status' => 'paid',
-            'confirmed_at' => now()
+            'confirmed_at' => now(),
         ]);
     }
 
     public function markAsFailed()
     {
-        $this->update([
-            'payment_status' => 'failed'
-        ]);
+        $this->update(['payment_status' => 'failed']);
     }
 
     public function markAsCheckedIn()
@@ -101,6 +97,7 @@ class Participant extends Model
         $this->update(['checked_in_at' => now()]);
     }
 
+    /** 🧾 Helpers **/
     public function isPaid()
     {
         return $this->payment_status === 'paid';
@@ -126,6 +123,7 @@ class Participant extends Model
         return $this->pix_expires_at && $this->pix_expires_at->isPast();
     }
 
+    /** 💰 Accessors **/
     public function getFormattedPaymentAmountAttribute()
     {
         $amount = (float) $this->payment_amount;
@@ -138,13 +136,14 @@ class Participant extends Model
             'paid' => ['class' => 'bg-green-100 text-green-800', 'text' => 'Pago'],
             'pending' => ['class' => 'bg-yellow-100 text-yellow-800', 'text' => 'Pendente'],
             'failed' => ['class' => 'bg-red-100 text-red-800', 'text' => 'Falhou'],
-            default => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Desconhecido']
+            default => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Desconhecido'],
         };
     }
 
+    /** 🆓 Free events **/
     public function isFreeEvent()
     {
-        return $this->event->is_free;
+        return $this->event && $this->event->is_free;
     }
 
     public function processFreeRegistration()
@@ -152,7 +151,7 @@ class Participant extends Model
         if ($this->isFreeEvent() && $this->isPending()) {
             $this->update([
                 'payment_status' => 'paid',
-                'confirmed_at' => now()
+                'confirmed_at' => now(),
             ]);
         }
     }

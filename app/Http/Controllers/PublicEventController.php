@@ -9,12 +9,47 @@ use App\Models\EventAnalytic;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
-class EventPublicController extends Controller
+class PublicEventController extends Controller
 {
-    /**
-     * Exibe um evento público pelo slug.
-     */
+    public function index(Request $request)
+    {
+        $userLat = $request->session()->get('user_lat');
+        $userLng = $request->session()->get('user_lng');
+
+        $eventsQuery = Event::with(['organizer', 'priceTiers' => function ($query) {
+            $query->where('is_active', true);
+        }])
+            ->where('status', 'active')
+            ->where('is_public', true)
+            ->where('event_date', '>=', now())
+            ->withCount(['participants as confirmed_count' => function ($query) {
+                $query->where('payment_status', 'paid');
+            }]);
+
+        if ($userLat && $userLng) {
+            $eventsQuery->addSelect([
+                'distance' => DB::raw("
+                    (6371 * acos(cos(radians({$userLat})) * cos(radians(latitude)) *
+                    cos(radians(longitude) - radians({$userLng})) +
+                    sin(radians({$userLat})) * sin(radians(latitude))))
+                ")
+            ])
+                ->orderBy('distance')
+                ->orderBy('event_date', 'asc');
+        } else {
+            $eventsQuery->orderBy('event_date', 'asc');
+        }
+
+        $events = $eventsQuery->paginate(12);
+
+        return Inertia::render('Events/PublicIndex', [
+            'events' => $events,
+            'hasLocation' => !is_null($userLat) && !is_null($userLng),
+        ]);
+    }
+
     public function show($slug)
     {
         $event = Event::with([
@@ -24,7 +59,7 @@ class EventPublicController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        if ($event->status !== 'active' && !$event->is_public) {
+        if ($event->status !== 'active' || !$event->is_public) {
             abort(404, 'Evento não encontrado.');
         }
 
@@ -63,13 +98,11 @@ class EventPublicController extends Controller
         ]);
     }
 
-    /**
-     * Registra um participante em um evento público.
-     */
     public function participate(Request $request, $slug)
     {
         $event = Event::where('slug', $slug)
             ->where('status', 'active')
+            ->where('is_public', true)
             ->firstOrFail();
 
         $request->validate([
@@ -81,12 +114,10 @@ class EventPublicController extends Controller
 
         $priceTier = PriceTier::findOrFail($request->price_tier_id);
 
-        // Verifica disponibilidade do lote
         if (!$priceTier->is_active || ($priceTier->max_quantity && $priceTier->current_quantity >= $priceTier->max_quantity)) {
             return back()->withErrors(['price_tier' => 'Este lote não está mais disponível.']);
         }
 
-        // Verifica se o evento atingiu o limite
         $confirmedCount = Participant::where('event_id', $event->id)
             ->where('payment_status', 'paid')
             ->count();
@@ -95,11 +126,9 @@ class EventPublicController extends Controller
             return back()->withErrors(['limit' => 'Este evento está lotado.']);
         }
 
-        // Define status de pagamento
         $paymentStatus = $event->is_free ? 'paid' : 'pending';
         $confirmedAt = $event->is_free ? now() : null;
 
-        // Monta dados do participante
         $participantData = [
             'event_id' => $event->id,
             'price_tier_id' => $priceTier->id,
@@ -111,16 +140,13 @@ class EventPublicController extends Controller
             'confirmed_at' => $confirmedAt,
         ];
 
-        // ✅ Se o usuário estiver autenticado e tiver perfil, associa o profile_id
         if (Auth::check() && Auth::user()->profile) {
             $participantData['profile_id'] = Auth::user()->profile->id;
         }
 
-        // Cria o participante e atualiza o lote
         $participant = Participant::create($participantData);
         $priceTier->increment('current_quantity');
 
-        // Redireciona conforme tipo de evento
         if ($event->is_free) {
             return redirect()->route('payment.success', $participant->id);
         }
@@ -128,9 +154,21 @@ class EventPublicController extends Controller
         return redirect()->route('payment.checkout', $participant->id);
     }
 
-    /**
-     * Incrementa as métricas de visualização do evento.
-     */
+    public function storeLocation(Request $request)
+    {
+        $request->validate([
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+        ]);
+
+        session([
+            'user_lat' => $request->latitude,
+            'user_lng' => $request->longitude,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
     private function incrementAnalytics(Event $event)
     {
         $today = now()->format('Y-m-d');

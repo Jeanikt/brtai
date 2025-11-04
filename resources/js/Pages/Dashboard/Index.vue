@@ -77,8 +77,9 @@
                     <button @click="showFilterDropdown = !showFilterDropdown"
                         class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700 border border-transparent hover:border-gray-300 min-w-[120px] justify-between">
                         <span>{{ getCurrentFilterLabel() }}</span>
-                        <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" :class="{ 'rotate-180': showFilterDropdown }"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 text-gray-500 transition-transform duration-200"
+                            :class="{ 'rotate-180': showFilterDropdown }" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
@@ -87,10 +88,10 @@
                     <div v-if="showFilterDropdown"
                         class="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-20 backdrop-blur-sm bg-white/95">
                         <div class="px-3 py-2 border-b border-gray-100">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtrar por status</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtrar por status
+                            </p>
                         </div>
-                        <button v-for="filter in filters" :key="filter.value"
-                            @click="filterEvents(filter.value)"
+                        <button v-for="filter in filters" :key="filter.value" @click="filterEvents(filter.value)"
                             :class="[
                                 'w-full text-left px-4 py-3 text-sm transition-colors duration-150 flex items-center gap-3',
                                 currentFilter === filter.value
@@ -107,7 +108,8 @@
                 </div>
 
                 <!-- Botão de Ordenação -->
-                <button class="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700">
+                <button
+                    class="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />

@@ -136,7 +136,7 @@ class EventController extends Controller
             'rules' => $validated['rules'] ?? null,
             'max_participants' => $this->getMaxParticipantsForPlan($profile->plan_type, $validated['max_participants'] ?? null),
             'status' => 'draft',
-            'is_public' => true,
+            'is_public' => false,
             'is_free' => (bool) ($validated['is_free'] ?? false),
         ];
 
@@ -336,7 +336,10 @@ class EventController extends Controller
             ]);
         }
 
-        $event->update(['status' => 'active']);
+        $event->update([
+            'status' => 'active',
+            'is_public' => true
+        ]);
 
         $this->cacheService->invalidateEventCaches($event->id);
         $this->cacheService->invalidateUserCaches($profile->id);
@@ -352,7 +355,10 @@ class EventController extends Controller
             abort(403, 'Você não tem permissão para despublicar este evento.');
         }
 
-        $event->update(['status' => 'draft']);
+        $event->update([
+            'status' => 'draft',
+            'is_public' => false
+        ]);
 
         $this->cacheService->invalidateEventCaches($event->id);
         $this->cacheService->invalidateUserCaches($profile->id);

@@ -2,7 +2,6 @@
     <AuthenticatedLayout>
         <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             <div class="max-w-7xl mx-auto px-4 py-6">
-                <!-- Header -->
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-3">
                         <Link :href="route('dashboard')"
@@ -25,6 +24,14 @@
                                 :class="statusClass">
                                 {{ statusText }}
                             </span>
+                            <span v-if="event.is_public"
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Público
+                            </span>
+                            <span v-else
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Privado
+                            </span>
                         </div>
 
                         <div class="flex gap-2">
@@ -45,11 +52,8 @@
                     </div>
                 </div>
 
-                <!-- Main Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left Column -->
                     <div class="lg:col-span-2 space-y-4">
-                        <!-- Event URL Card -->
                         <div class="bg-white rounded-2xl shadow-sm p-4">
                             <h3 class="text-base font-semibold text-gray-900 mb-3">Link do Evento</h3>
                             <div class="flex gap-2">
@@ -66,9 +70,7 @@
                             </div>
                         </div>
 
-                        <!-- Metrics Grid -->
                         <div class="grid grid-cols-2 gap-4">
-                            <!-- Revenue Card -->
                             <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-4 shadow-sm">
                                 <div class="flex items-center justify-between mb-3">
                                     <div class="w-8 h-8 bg-green-500 rounded-xl flex items-center justify-center">
@@ -85,7 +87,6 @@
                                 <p class="text-xs text-gray-500">{{ stats.pending_payments }} pendentes</p>
                             </div>
 
-                            <!-- Participants Card -->
                             <div class="bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl p-4 shadow-sm">
                                 <div class="flex items-center justify-between mb-3">
                                     <div class="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center">
@@ -103,7 +104,6 @@
                                 <p class="text-xs text-gray-500">{{ stats.pending_participants }} aguardando</p>
                             </div>
 
-                            <!-- Conversion Rate -->
                             <div class="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl p-4 shadow-sm">
                                 <div class="w-8 h-8 bg-purple-500 rounded-xl flex items-center justify-center mb-3">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
@@ -117,7 +117,6 @@
                                 <p class="text-xs text-gray-500">Eficiência</p>
                             </div>
 
-                            <!-- Time Remaining -->
                             <div class="bg-gradient-to-br from-orange-50 to-amber-100 rounded-2xl p-4 shadow-sm">
                                 <div class="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center mb-3">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
@@ -132,7 +131,6 @@
                             </div>
                         </div>
 
-                        <!-- Participants List -->
                         <div class="bg-white rounded-2xl shadow-sm p-4">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-lg font-semibold text-gray-900">Lista de Convidados</h3>
@@ -188,9 +186,7 @@
                         </div>
                     </div>
 
-                    <!-- Right Column -->
                     <div class="space-y-4">
-                        <!-- Event Image -->
                         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
                             <img v-if="event.header_image_url" :src="event.header_image_url" :alt="event.name"
                                 class="w-full h-32 object-cover" />
@@ -255,14 +251,13 @@
                                             <p class="text-xs text-gray-600">Tipo</p>
                                             <p class="font-medium text-gray-900 text-sm">{{ event.is_free ? 'Gratuito' :
                                                 'Pago'
-                                                }}</p>
+                                            }}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Quick Actions -->
                         <div class="bg-white rounded-2xl shadow-sm p-4">
                             <h3 class="text-base font-semibold text-gray-900 mb-3">Ações Rápidas</h3>
 
@@ -436,13 +431,13 @@ const paymentStatusClass = (status) => {
 }
 
 const publishEvent = () => {
-    if (confirm('Tem certeza que deseja publicar este evento?')) {
+    if (confirm('Tem certeza que deseja publicar este evento? Ele ficará visível publicamente.')) {
         router.post(route('events.publish', props.event.id))
     }
 }
 
 const unpublishEvent = () => {
-    if (confirm('Tem certeza que deseja despublicar este evento?')) {
+    if (confirm('Tem certeza que deseja despublicar este evento? Ele não ficará mais visível publicamente.')) {
         router.post(route('events.unpublish', props.event.id))
     }
 }

@@ -17,7 +17,17 @@
 
                         <Link :href="route('dashboard')"
                             class="bg-[#FFFF00] text-black px-6 py-2 rounded-full text-sm font-semibold hover:bg-[#FFFF33] transition-colors">
-                        Meus eventos
+                        Criar eventos
+                        </Link>
+
+                        <Link :href="route('user.history')"
+                            class="bg-[#82ef00] text-gray-900 border border-gray-200 px-6 py-2 rounded-full text-sm font-semibold hover:bg-gray-50 transition-colors">
+                        Meu Histórico
+                        </Link>
+
+                        <Link :href="route('events.public.index')"
+                            class="bg-[#82ef00] text-gray-900 border border-gray-200 px-6 py-2 rounded-full text-sm font-semibold hover:bg-gray-50 transition-colors">
+                        Eventos Públicos
                         </Link>
 
                         <Link :href="route('roadmap.index')"
@@ -72,6 +82,10 @@
                         <Link :href="route('dashboard')"
                             class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
                         Dashboard
+                        </Link>
+                        <Link :href="route('user.history')"
+                            class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
+                        Meu Histórico
                         </Link>
                         <Link :href="route('roadmap.index')"
                             class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">

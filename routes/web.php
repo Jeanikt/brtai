@@ -11,9 +11,11 @@ use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\PublicEventController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\UserHistoryController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -40,6 +42,9 @@ Route::post('/e/{event:slug}/participate', [EventPublicController::class, 'parti
 Route::post('/webhooks/abacatepay', [WebhookController::class, 'handleAbacatePay']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
+
+    Route::get('/user/history', [UserHistoryController::class, 'index'])->name('user.history');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
 
@@ -52,6 +57,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
     Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
     Route::get('/events/{event}/analytics', [EventController::class, 'analytics'])->name('events.analytics');
+
+
+    Route::get('/events-public', [PublicEventController::class, 'index'])->name('events.public.index');
+    Route::post('/events-public/location', [PublicEventController::class, 'storeLocation'])->name('events.public.storeLocation');
+    Route::get('/e/{slug}', [PublicEventController::class, 'show'])->name('events.public.show');
+    Route::post('/e/{slug}/participate', [PublicEventController::class, 'participate'])->name('events.public.participate');
 
     Route::post('/events/{event}/price-tiers', [PriceTierController::class, 'store'])->name('price-tiers.store');
     Route::put('/price-tiers/{priceTier}', [PriceTierController::class, 'update'])->name('price-tiers.update');
