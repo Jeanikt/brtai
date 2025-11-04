@@ -40,8 +40,7 @@
                     <div v-if="form.errors.name" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.name }}</div>
                 </div>
 
-                <div v-if="user_plan === 'pro'" class="flex justify-between items-center p-4 bg-gray-200 rounded-2xl">
-                    <!-- Esquerda: checkbox + label -->
+                <div class="flex justify-between items-center p-4 bg-gray-200 rounded-2xl">
                     <div class="flex items-center gap-2">
                         <input v-model="form.is_free" type="checkbox" id="is_free"
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2" />
@@ -50,13 +49,11 @@
                         </label>
                     </div>
 
-                    <!-- Direita: texto explicativo -->
                     <div class="text-xs text-gray-500 text-right">
                         Qualquer pessoa com o link pode entrar <br />
                         até atingir o limite máximo de convidados
                     </div>
                 </div>
-
 
                 <div class="grid grid-cols-2 gap-3">
                     <div class="relative">
@@ -142,18 +139,6 @@
                             <ProBadge />
                         </div>
                     </div>
-                </div>
-
-                <div v-if="user_plan !== 'pro' && form.is_free"
-                    class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                    <p class="text-sm text-yellow-800">
-                        <strong>Apenas para plano Pro:</strong> Eventos gratuitos estão disponíveis apenas para usuários
-                        do plano Pro.
-                        <Link :href="route('settings.billing')"
-                            class="font-semibold underline hover:text-yellow-900 ml-1">
-                        Fazer upgrade
-                        </Link>
-                    </p>
                 </div>
 
                 <ParticipantLimitWarning v-if="user_plan === 'freemium' && form.max_participants"
@@ -290,11 +275,6 @@ const updateCalculations = () => {
 }
 
 const submit = () => {
-    if (form.is_free && props.user_plan !== 'pro') {
-        alert('Eventos gratuitos são exclusivos do plano Pro. Faça upgrade para utilizar esta funcionalidade.')
-        return
-    }
-
     if (!form.name || !form.event_date || !form.event_time || !form.location) {
         alert('Por favor, preencha todos os campos obrigatórios.')
         return

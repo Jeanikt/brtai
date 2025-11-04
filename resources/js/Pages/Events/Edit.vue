@@ -25,7 +25,6 @@
                 :ticket-price="ticketPriceNumber" />
 
             <form @submit.prevent="submit" class="space-y-4">
-                <!-- Nome do Evento -->
                 <div class="relative">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,8 +39,7 @@
                     <div v-if="form.errors.name" class="text-red-500 text-xs mt-1 ml-12">{{ form.errors.name }}</div>
                 </div>
 
-                <!-- Evento Gratuito (apenas para Pro) -->
-                <div v-if="user_plan === 'pro'" class="flex justify-between items-center p-4 bg-gray-200 rounded-2xl">
+                <div class="flex justify-between items-center p-4 bg-gray-200 rounded-2xl">
                     <div class="flex items-center gap-2">
                         <input v-model="form.is_free" type="checkbox" id="is_free"
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2" />
@@ -55,7 +53,6 @@
                     </div>
                 </div>
 
-                <!-- Data e Hora -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -88,7 +85,6 @@
                     </div>
                 </div>
 
-                <!-- Local -->
                 <div class="relative">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +102,6 @@
                     </div>
                 </div>
 
-                <!-- Preço e Número de Participantes -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="relative">
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -144,25 +139,10 @@
                     </div>
                 </div>
 
-                <!-- Aviso para não Pro tentando criar evento gratuito -->
-                <div v-if="user_plan !== 'pro' && form.is_free"
-                    class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                    <p class="text-sm text-yellow-800">
-                        <strong>Apenas para plano Pro:</strong> Eventos gratuitos estão disponíveis apenas para usuários
-                        do plano Pro.
-                        <Link :href="route('settings.billing')"
-                            class="font-semibold underline hover:text-yellow-900 ml-1">
-                        Fazer upgrade
-                        </Link>
-                    </p>
-                </div>
-
-                <!-- Aviso de limite de participantes para Free -->
                 <ParticipantLimitWarning v-if="user_plan === 'freemium' && form.max_participants"
                     :current-participants="participantsNumber" :max-participants="70" :ticket-price="ticketPriceNumber"
                     :user-plan="user_plan" />
 
-                <!-- Upload de Imagem -->
                 <div class="relative bg-gray-100 rounded-2xl p-6 text-center border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer"
                     @click="fileInput?.click()">
                     <input ref="fileInput" type="file" accept="image/*" @change="handleFileUpload" class="hidden" />
@@ -190,7 +170,6 @@
                     </div>
                 </div>
 
-                <!-- Botão de Submissão -->
                 <button type="submit" :disabled="form.processing"
                     class="w-full bg-black text-white py-4 rounded-full font-bold text-base hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                     <span>{{ form.processing ? 'Atualizando...' : 'Atualizar Evento' }}</span>
@@ -257,7 +236,6 @@ interface EventForm {
     _method: string;
 }
 
-// Helper function to safely format the event date
 const formatEventDate = (dateString: string): string => {
     if (!dateString) return '';
 
@@ -272,7 +250,6 @@ const formatEventDate = (dateString: string): string => {
     }
 }
 
-// Helper function to safely format the event time
 const formatEventTime = (dateString: string): string => {
     if (!dateString) return '';
 
@@ -287,7 +264,6 @@ const formatEventTime = (dateString: string): string => {
     }
 }
 
-// Helper function to get the first price tier price
 const getFirstPriceTierPrice = (priceTiers: PriceTier[]): string => {
     if (!priceTiers || priceTiers.length === 0) return '';
     return priceTiers[0]?.price?.toString() || '';
@@ -352,15 +328,9 @@ const removeImage = () => {
 }
 
 const updateCalculations = () => {
-    // Lógica para atualizar cálculos se necessário
 }
 
 const submit = () => {
-    if (form.is_free && props.user_plan !== 'pro') {
-        alert('Eventos gratuitos são exclusivos do plano Pro. Faça upgrade para utilizar esta funcionalidade.')
-        return
-    }
-
     if (!form.name || !form.event_date || !form.event_time || !form.location) {
         alert('Por favor, preencha todos os campos obrigatórios.')
         return

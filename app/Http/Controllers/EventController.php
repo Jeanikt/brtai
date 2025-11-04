@@ -107,12 +107,6 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
-        if (isset($validated['is_free']) && $validated['is_free'] && $profile->plan_type !== 'pro') {
-            return redirect()->back()->withErrors([
-                'is_free' => 'Eventos gratuitos são exclusivos do plano Pro.'
-            ]);
-        }
-
         $validated['max_participants'] = isset($validated['max_participants']) ? (int) $validated['max_participants'] : null;
 
         if (isset($validated['is_free']) && $validated['is_free']) {
