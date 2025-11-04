@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-center w-[430px] h-[63px] rounded-[44px] bg-white/20 backdrop-blur-[12.5px] px-4 overflow-hidden">
     <div class="flex items-center gap-4">
-      <ApplicationLogo fill="green" class="w-10 h-10 sm:w-20 sm:h-20" />
+      <ApplicationLogo fill="white" class="w-10 h-10 sm:w-20 sm:h-20" />
 
       <Link :href="route('login')">
         <img :src="entrarSvg" alt="Entrar"
