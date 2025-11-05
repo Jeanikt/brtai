@@ -5,7 +5,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10  rounded-xl flex items-center justify-center">
-                           <ApplicationLogo fill="black" class="w-10 h-10" />
+                            <ApplicationLogo fill="black" class="w-10 h-10" />
                         </div>
                         <div>
                             <h1 class="text-lg font-bold text-gray-900">{{ event.name }}</h1>
@@ -139,66 +139,122 @@
 
                     <div v-if="selectedTier" class="bg-gray-50 rounded-2xl p-6">
                         <h3 class="text-lg font-bold text-gray-900 mb-2">🎯 Finalizar Inscrição</h3>
-                        <p class="text-gray-600 text-sm mb-4">Preencha seus dados para garantir sua vaga</p>
+                        <p class="text-gray-600 text-sm mb-4">Preencha os dados para garantir sua vaga</p>
 
-                        <form @submit.prevent="submitParticipation" class="space-y-4">
-                            <div class="relative">
-                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                </div>
-                                <input v-model="form.full_name" type="text" required
-                                    class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-0 focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400"
-                                    placeholder="Nome Completo *" />
-                            </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Quantidade de Ingressos
+                            </label>
+                            <select v-model="ticketQuantity" @change="updateParticipants"
+                                class="w-full px-4 py-3 bg-white rounded-2xl border border-gray-300 focus:ring-2 focus:ring-black focus:border-black">
+                                <option v-for="n in 10" :key="n" :value="n">{{ n }} ingresso{{ n > 1 ? 's' : '' }}
+                                </option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Cada ingresso deve ser associado a um CPF e telefone único
+                            </p>
+                        </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <form @submit.prevent="submitParticipation" class="space-y-6">
+                            <div v-for="(participant, index) in form.participants" :key="index"
+                                class="border border-gray-200 rounded-2xl p-4 space-y-4">
+                                <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                    <span
+                                        class="w-6 h-6 bg-black text-white rounded-full text-xs flex items-center justify-center">
+                                        {{ index + 1 }}
+                                    </span>
+                                    Participante {{ index + 1 }}
+                                </h4>
+
                                 <div class="relative">
                                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                         </svg>
                                     </div>
-                                    <input v-model="form.email" type="email"
+                                    <input v-model="participant.full_name" type="text" required
                                         class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-0 focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400"
-                                        placeholder="Email" />
+                                        placeholder="Nome Completo *" />
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="relative">
+                                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <input v-model="participant.email" type="email"
+                                            class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-0 focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400"
+                                            placeholder="Email" />
+                                    </div>
+
+                                    <div class="relative">
+                                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                            </svg>
+                                        </div>
+                                        <input v-model="participant.phone" type="tel" required
+                                            class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-0 focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400"
+                                            placeholder="Telefone *" @input="formatPhone(index)" maxlength="15" />
+                                    </div>
                                 </div>
 
                                 <div class="relative">
                                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
                                     </div>
-                                    <input v-model="form.phone" type="tel" required
+                                    <input v-model="participant.cpf" type="text" required
                                         class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-0 focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400"
-                                        placeholder="Telefone *" />
+                                        placeholder="CPF (apenas números) *" @input="formatCPF(index)" maxlength="14" />
                                 </div>
                             </div>
 
                             <div class="bg-white rounded-2xl p-4 border border-gray-200">
                                 <h4 class="font-semibold text-gray-900 text-sm mb-3">Resumo do Pedido</h4>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-600 text-sm">{{ selectedTier.name }}</span>
-                                    <span class="text-base font-bold text-gray-900">
-                                        {{ event.is_free ? 'Grátis' : `R$ ${selectedTier.price}` }}
-                                    </span>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 text-sm">{{ selectedTier.name }} × {{ ticketQuantity
+                                        }}</span>
+                                        <span class="text-base font-bold text-gray-900">
+                                            {{ event.is_free ? 'Grátis' : `R$ ${(selectedTier.price *
+                                                ticketQuantity).toFixed(2)}` }}
+                                        </span>
+                                    </div>
+                                    <div v-if="!event.is_free"
+                                        class="flex justify-between items-center text-xs text-gray-500">
+                                        <span>Taxa de serviço</span>
+                                        <span>Inclusa</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <button type="submit" :disabled="form.processing"
                                 class="w-full bg-black text-white py-4 rounded-full font-bold text-base hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <span>{{ form.processing ? 'Processando...' : event.is_free ? 'Confirmar Inscrição Gratuita' : `Confirmar - R$ ${selectedTier.price}` }}</span>
+                                <span>
+                                    {{ form.processing ? 'Processando...' :
+                                        event.is_free ?
+                                            `Confirmar ${ticketQuantity} Inscrição${ticketQuantity > 1 ? 'ões' : ''}` :
+                                            `Pagar R$ ${(selectedTier.price * ticketQuantity).toFixed(2)}`
+                                    }}
+                                </span>
                                 <svg v-if="!form.processing" class="w-5 h-5" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M5 13l4 4L19 7" />
                                 </svg>
                             </button>
+
+                            <p class="text-xs text-gray-500 text-center">
+                                🔒 Cada ingresso é pessoal e intransferível. CPF e telefone serão validados no check-in.
+                            </p>
                         </form>
                     </div>
 
@@ -226,8 +282,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { ref, watch } from 'vue'
+import { useForm, router } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
 const props = defineProps({
@@ -238,13 +294,52 @@ const props = defineProps({
 
 const selectedTier = ref(null)
 const hasPaid = ref(false)
+const ticketQuantity = ref(1)
 
 const form = useForm({
-    full_name: '',
-    email: '',
-    phone: '',
+    participants: [
+        {
+            full_name: '',
+            email: '',
+            phone: '',
+            cpf: ''
+        }
+    ],
     price_tier_id: null
 })
+
+const updateParticipants = () => {
+    const currentLength = form.participants.length
+    if (ticketQuantity.value > currentLength) {
+        for (let i = currentLength; i < ticketQuantity.value; i++) {
+            form.participants.push({
+                full_name: '',
+                email: '',
+                phone: '',
+                cpf: ''
+            })
+        }
+    } else {
+        form.participants.splice(ticketQuantity.value)
+    }
+}
+
+const formatCPF = (index) => {
+    let cpf = form.participants[index].cpf
+    cpf = cpf.replace(/\D/g, '')
+    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2')
+    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2')
+    cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    form.participants[index].cpf = cpf
+}
+
+const formatPhone = (index) => {
+    let phone = form.participants[index].phone
+    phone = phone.replace(/\D/g, '')
+    phone = phone.replace(/(\d{2})(\d)/, '($1) $2')
+    phone = phone.replace(/(\d{5})(\d)/, '$1-$2')
+    form.participants[index].phone = phone
+}
 
 const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -266,7 +361,35 @@ const selectTicket = (tier) => {
 }
 
 const submitParticipation = () => {
-    form.post(window.route('events.public.participate', { event: props.event.slug }))
+    const participantsData = form.participants.map(participant => {
+        return {
+            ...participant,
+            cpf: participant.cpf.replace(/\D/g, ''),
+            phone: participant.phone.replace(/\D/g, '')
+        };
+    });
+
+    for (let i = 0; i < participantsData.length; i++) {
+        const participant = participantsData[i];
+        if (participant.cpf.length !== 11) {
+            alert(`O CPF do participante ${i + 1} deve ter 11 dígitos.`);
+            return;
+        }
+
+        const phoneDigits = participant.phone;
+        if (phoneDigits.length < 10) {
+            alert(`O telefone do participante ${i + 1} deve ter pelo menos 10 dígitos.`);
+            return;
+        }
+    }
+
+    router.post(route('events.public.participate', { event: props.event.slug }), {
+        participants: participantsData,
+        price_tier_id: form.price_tier_id
+    }, {
+        onStart: () => form.processing = true,
+        onFinish: () => form.processing = false,
+    });
 }
 
 const shareWhatsApp = () => {

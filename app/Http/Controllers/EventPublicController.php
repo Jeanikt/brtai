@@ -6,15 +6,14 @@ use App\Models\Event;
 use App\Models\Participant;
 use App\Models\PriceTier;
 use App\Models\EventAnalytic;
-use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
+use Exception;
 class EventPublicController extends Controller
 {
-    /**
-     * Exibe um evento público pelo slug.
-     */
     public function show($slug)
     {
         $event = Event::with([
@@ -63,74 +62,134 @@ class EventPublicController extends Controller
         ]);
     }
 
-    /**
-     * Registra um participante em um evento público.
-     */
     public function participate(Request $request, $slug)
     {
+        Log::info('Participate method called for event: ' . $slug);
+        Log::info('Request data: ', $request->all());
+
         $event = Event::where('slug', $slug)
             ->where('status', 'active')
             ->firstOrFail();
 
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'email' => 'nullable|email',
-            'phone' => 'required|string|max:20',
-            'price_tier_id' => 'required|exists:price_tiers,id',
-        ]);
+        Log::info('Event found: ', [$event->id, $event->name, $event->is_free]);
 
         $priceTier = PriceTier::findOrFail($request->price_tier_id);
 
-        // Verifica disponibilidade do lote
-        if (!$priceTier->is_active || ($priceTier->max_quantity && $priceTier->current_quantity >= $priceTier->max_quantity)) {
-            return back()->withErrors(['price_tier' => 'Este lote não está mais disponível.']);
+        Log::info('Price tier found: ', [$priceTier->id, $priceTier->name, $priceTier->is_active]);
+
+        $validator = Validator::make($request->all(), [
+            'participants' => 'required|array|min:1|max:10',
+            'participants.*.full_name' => 'required|string|max:255',
+            'participants.*.email' => 'nullable|email',
+            'participants.*.phone' => 'required|string|max:20',
+            'participants.*.cpf' => 'required|string|size:11',
+            'price_tier_id' => 'required|exists:price_tiers,id',
+        ], [
+            'participants.*.cpf.size' => 'O CPF deve ter 11 dígitos.',
+            'participants.*.cpf.required' => 'O CPF é obrigatório para cada participante.',
+            'participants.*.phone.required' => 'O telefone é obrigatório para cada participante.',
+        ]);
+
+        if ($validator->fails()) {
+            Log::error('Validation failed: ', $validator->errors()->toArray());
+            return back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
-        // Verifica se o evento atingiu o limite
+        if (!$priceTier->is_active || ($priceTier->max_quantity && $priceTier->current_quantity + count($request->participants) > $priceTier->max_quantity)) {
+            Log::error('Price tier not available');
+            return back()->withErrors(['price_tier' => 'Este lote não tem ingressos suficientes.']);
+        }
+
         $confirmedCount = Participant::where('event_id', $event->id)
             ->where('payment_status', 'paid')
             ->count();
 
-        if ($event->max_participants && $confirmedCount >= $event->max_participants) {
-            return back()->withErrors(['limit' => 'Este evento está lotado.']);
+        if ($event->max_participants && $confirmedCount + count($request->participants) > $event->max_participants) {
+            Log::error('Event full');
+            return back()->withErrors(['limit' => 'Este evento não tem vagas suficientes.']);
         }
 
-        // Define status de pagamento
+        $cpfs = collect($request->participants)->pluck('cpf');
+        $phones = collect($request->participants)->pluck('phone');
+
+        if ($cpfs->count() !== $cpfs->unique()->count()) {
+            Log::error('Duplicate CPFs');
+            return back()->withErrors(['cpf' => 'Não é possível usar o mesmo CPF para múltiplos participantes.']);
+        }
+
+        if ($phones->count() !== $phones->unique()->count()) {
+            Log::error('Duplicate phones');
+            return back()->withErrors(['phone' => 'Não é possível usar o mesmo telefone para múltiplos participantes.']);
+        }
+
+        $existingCpfs = Participant::where('event_id', $event->id)
+            ->whereIn('cpf', $cpfs)
+            ->pluck('cpf')
+            ->toArray();
+
+        $existingPhones = Participant::where('event_id', $event->id)
+            ->whereIn('phone', $phones)
+            ->pluck('phone')
+            ->toArray();
+
+        if (!empty($existingCpfs)) {
+            Log::error('CPFs already registered');
+            return back()->withErrors(['cpf' => 'Os seguintes CPFs já estão inscritos neste evento: ' . implode(', ', $existingCpfs)]);
+        }
+
+        if (!empty($existingPhones)) {
+            Log::error('Phones already registered');
+            return back()->withErrors(['phone' => 'Os seguintes telefones já estão inscritos neste evento: ' . implode(', ', $existingPhones)]);
+        }
+
         $paymentStatus = $event->is_free ? 'paid' : 'pending';
         $confirmedAt = $event->is_free ? now() : null;
 
-        // Monta dados do participante
-        $participantData = [
-            'event_id' => $event->id,
-            'price_tier_id' => $priceTier->id,
-            'full_name' => $request->full_name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'payment_amount' => $priceTier->price,
-            'payment_status' => $paymentStatus,
-            'confirmed_at' => $confirmedAt,
-        ];
+        $createdParticipants = [];
 
-        // ✅ Se o usuário estiver autenticado e tiver perfil, associa o profile_id
-        if (Auth::check() && Auth::user()->profile) {
-            $participantData['profile_id'] = Auth::user()->profile->id;
+        try {
+            foreach ($request->participants as $participantData) {
+                $participantData = [
+                    'event_id' => $event->id,
+                    'price_tier_id' => $priceTier->id,
+                    'full_name' => $participantData['full_name'],
+                    'email' => $participantData['email'] ?? null,
+                    'phone' => $participantData['phone'],
+                    'cpf' => $participantData['cpf'],
+                    'payment_amount' => $priceTier->price,
+                    'payment_status' => $paymentStatus,
+                    'confirmed_at' => $confirmedAt,
+                ];
+
+                if (Auth::check() && Auth::user()->profile) {
+                    $participantData['profile_id'] = Auth::user()->profile->id;
+                }
+
+                Log::info('Creating participant: ', $participantData);
+                $participant = Participant::create($participantData);
+                Log::info('Participant created: ' . $participant->id);
+                $createdParticipants[] = $participant;
+            }
+
+            $priceTier->increment('current_quantity', count($request->participants));
+            Log::info('Price tier quantity incremented.');
+
+            if ($event->is_free) {
+                Log::info('Redirecting to success for free event');
+                return redirect()->route('payment.success', $createdParticipants[0]->id);
+            }
+
+            Log::info('Redirecting to checkout for paid event');
+            return redirect()->route('payment.checkout', $createdParticipants[0]->id);
+        } catch (Exception $e) {
+            Log::error('Error creating participant: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return back()->withErrors(['error' => 'Erro interno ao processar inscrição.']);
         }
-
-        // Cria o participante e atualiza o lote
-        $participant = Participant::create($participantData);
-        $priceTier->increment('current_quantity');
-
-        // Redireciona conforme tipo de evento
-        if ($event->is_free) {
-            return redirect()->route('payment.success', $participant->id);
-        }
-
-        return redirect()->route('payment.checkout', $participant->id);
     }
 
-    /**
-     * Incrementa as métricas de visualização do evento.
-     */
     private function incrementAnalytics(Event $event)
     {
         $today = now()->format('Y-m-d');

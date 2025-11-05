@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Participant;
 use App\Models\PaymentTransaction;
-use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
@@ -15,7 +16,7 @@ class PaymentController extends Controller
 
     public function checkout($participantId)
     {
-        $participant = Participant::findOrFail($participantId);
+        $participant = Participant::with(['event', 'priceTier'])->findOrFail($participantId);
 
         if ($participant->isPaid()) {
             return redirect()->route('payment.success', $participant->id);
@@ -35,7 +36,7 @@ class PaymentController extends Controller
         }
 
         return Inertia::render('Payment/Checkout', [
-            'participant' => $participant->load('event', 'priceTier'),
+            'participant' => $participant,
             'pix_code' => $participant->pix_code,
             'pix_expires_at' => $participant->pix_expires_at,
         ]);
@@ -43,19 +44,53 @@ class PaymentController extends Controller
 
     public function success($participantId)
     {
-        $participant = Participant::findOrFail($participantId);
+        Log::info('PaymentController::success called for participant: ' . $participantId);
 
-        if (!$participant->isPaid()) {
-            return redirect()->route('payment.checkout', $participant->id);
+        try {
+            $participant = Participant::with(['event.organizer', 'priceTier'])->findOrFail($participantId);
+            Log::info('Participant found:', [$participant->toArray()]);
+
+            if (!$participant->isPaid()) {
+                Log::warning('Participant not paid, redirecting to checkout');
+                return redirect()->route('payment.checkout', $participant->id);
+            }
+
+            $event = $participant->event;
+            Log::info('Event found:', [$event->toArray()]);
+
+            $data = [
+                'participant' => [
+                    'id' => $participant->id,
+                    'full_name' => $participant->full_name,
+                    'email' => $participant->email,
+                    'phone' => $participant->phone,
+                    'cpf' => $participant->cpf,
+                    'payment_status' => $participant->payment_status,
+                    'confirmed_at' => $participant->confirmed_at,
+                ],
+                'event' => [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'slug' => $event->slug,
+                    'event_date' => $event->event_date,
+                    'location' => $event->location,
+                    'location_reveal_after_payment' => $event->location_reveal_after_payment,
+                    'header_image_url' => $event->header_image_url,
+                    'rules' => $event->rules,
+                    'organizer' => [
+                        'full_name' => $event->organizer->full_name ?? 'Organizador',
+                    ],
+                ],
+            ];
+
+            Log::info('Rendering Payment/Success with data:', $data);
+
+            return Inertia::render('Payment/Success', $data);
+        } catch (\Exception $e) {
+            Log::error('Error in PaymentController::success: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return redirect('/')->withErrors(['error' => 'Erro ao carregar página de sucesso.']);
         }
-
-        $event = $participant->event;
-
-        return Inertia::render('Payment/Success', [
-            'participant' => $participant,
-            'event' => $event,
-            'location' => $event->location_reveal_after_payment ? $event->location : null,
-        ]);
     }
 
     public function status($participantId)
@@ -76,12 +111,14 @@ class PaymentController extends Controller
         $payload = [
             'amount' => (float) $priceTier->price * 100,
             'currency' => 'BRL',
-            'description' => "Ingresso: {$event->name} - {$priceTier->name}",
+            'description' => "Ingresso: {$event->name} - {$priceTier->name} - {$participant->full_name}",
             'payment_method' => 'pix',
             'metadata' => [
                 'participant_id' => $participant->id,
                 'event_id' => $event->id,
-                'price_tier_id' => $priceTier->id
+                'price_tier_id' => $priceTier->id,
+                'participant_cpf' => $participant->cpf,
+                'participant_name' => $participant->full_name
             ],
             'success_url' => route('payment.success', $participant->id),
             'webhook_url' => route('webhooks.abacatepay')

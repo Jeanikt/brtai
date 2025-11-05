@@ -45,30 +45,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/user/history', [UserHistoryController::class, 'index'])->name('user.history');
 
+    //DASHBOARD
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
 
+    //ROADMAP
     Route::get('/roadmap', [RoadmapController::class, 'index'])->name('roadmap.index');
     Route::post('/roadmap', [RoadmapController::class, 'store'])->name('roadmap.store');
     Route::put('/roadmap/{roadmapItem}/status', [RoadmapController::class, 'updateStatus'])->name('roadmap.updateStatus');
     Route::post('/roadmap/{id}/like', [RoadmapController::class, 'like'])->name('roadmap.like');
 
+    //EVENTOS
     Route::resource('events', EventController::class);
     Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
     Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
     Route::get('/events/{event}/analytics', [EventController::class, 'analytics'])->name('events.analytics');
 
-
+    //EVENTOS
     Route::get('/events-public', [PublicEventController::class, 'index'])->name('events.public.index');
     Route::post('/events-public/location', [PublicEventController::class, 'storeLocation'])->name('events.public.storeLocation');
-    Route::get('/e/{slug}', [PublicEventController::class, 'show'])->name('events.public.show');
-    Route::post('/e/{slug}/participate', [PublicEventController::class, 'participate'])->name('events.public.participate');
+    Route::get('/e/{event:slug}', [EventPublicController::class, 'show'])->name('events.public.show');
+    Route::post('/e/{event:slug}/participate', [EventPublicController::class, 'participate'])->name('events.public.participate');
 
+    //EVENTOS
     Route::post('/events/{event}/price-tiers', [PriceTierController::class, 'store'])->name('price-tiers.store');
     Route::put('/price-tiers/{priceTier}', [PriceTierController::class, 'update'])->name('price-tiers.update');
     Route::delete('/price-tiers/{priceTier}', [PriceTierController::class, 'destroy'])->name('price-tiers.destroy');
     Route::post('/price-tiers/{priceTier}/toggle', [PriceTierController::class, 'toggle'])->name('price-tiers.toggle');
 
+    //EVENTOS
     Route::get('/events/{event}/participants', [ParticipantController::class, 'index'])->name('events.participants');
     Route::put('/participants/{participant}', [ParticipantController::class, 'update'])->name('participants.update');
     Route::delete('/participants/{participant}', [ParticipantController::class, 'destroy'])->name('participants.destroy');
@@ -76,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/events/{event}/export/participants', [ExportController::class, 'participants'])->name('events.export.participants');
     Route::get('/events/{event}/export/financials', [ExportController::class, 'eventFinancials'])->name('events.export.financials');
 
+    //PAGAMENTOS
     Route::get('/payment/{participant}/checkout', [PaymentController::class, 'checkout'])->name('payment.checkout');
     Route::get('/payment/{participant}/success', [PaymentController::class, 'success'])->name('payment.success');
     Route::get('/payment/{participant}/status', [PaymentController::class, 'status'])->name('payment.status');

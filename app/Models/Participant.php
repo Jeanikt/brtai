@@ -20,6 +20,7 @@ class Participant extends Model
         'full_name',
         'email',
         'phone',
+        'cpf',
         'payment_status',
         'payment_amount',
         'transaction_id',
@@ -61,6 +62,11 @@ class Participant extends Model
     public function userProfile()
     {
         return $this->belongsTo(Profile::class, 'profile_id');
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class);
     }
 
     /** 🎯 Scopes **/
@@ -130,6 +136,15 @@ class Participant extends Model
         return 'R$ ' . number_format($amount, 2, ',', '.');
     }
 
+    public function getFormattedCpfAttribute()
+    {
+        $cpf = preg_replace('/\D/', '', (string) $this->cpf);
+        if (strlen($cpf) === 11) {
+            return substr($cpf, 0, 3) . '.' . substr($cpf, 3, 3) . '.' . substr($cpf, 6, 3) . '-' . substr($cpf, 9, 2);
+        }
+        return $cpf;
+    }
+
     public function getStatusBadgeAttribute()
     {
         return match ($this->payment_status) {
@@ -154,5 +169,30 @@ class Participant extends Model
                 'confirmed_at' => now(),
             ]);
         }
+    }
+
+    /** 🧩 Validations **/
+    public static function isCpfUniqueForEvent($cpf, $eventId, $exceptParticipantId = null)
+    {
+        $query = self::where('event_id', $eventId)
+            ->where('cpf', $cpf);
+
+        if ($exceptParticipantId) {
+            $query->where('id', '!=', $exceptParticipantId);
+        }
+
+        return !$query->exists();
+    }
+
+    public static function isPhoneUniqueForEvent($phone, $eventId, $exceptParticipantId = null)
+    {
+        $query = self::where('event_id', $eventId)
+            ->where('phone', $phone);
+
+        if ($exceptParticipantId) {
+            $query->where('id', '!=', $exceptParticipantId);
+        }
+
+        return !$query->exists();
     }
 }
