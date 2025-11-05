@@ -12,9 +12,10 @@
 
             <div class="flex justify-between items-start">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Editar Evento</h1>
-                    <p class="text-sm text-gray-600 mt-1">Atualize os detalhes da sua resenha.</p>
+                    <h1 class="text-2xl font-bold text-gray-900">Criar Novo Evento</h1>
+                    <p class="text-sm text-gray-600 mt-1">Preencha os detalhes da sua resenha.</p>
                 </div>
+                <button class="text-sm text-gray-500 hover:text-gray-700">Salvar como rascunho</button>
             </div>
 
             <UpgradeProBanner v-if="user_plan === 'freemium'" title="Maximize Seus Ganhos com o Plano Pro!"
@@ -47,6 +48,7 @@
                             Evento gratuito
                         </label>
                     </div>
+
                     <div class="text-xs text-gray-500 text-right">
                         Qualquer pessoa com o link pode entrar <br />
                         até atingir o limite máximo de convidados
@@ -143,10 +145,10 @@
                     :current-participants="participantsNumber" :max-participants="70" :ticket-price="ticketPriceNumber"
                     :user-plan="user_plan" />
 
-                <div class="relative bg-gray-100 rounded-2xl p-6 text-center border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer"
+                <div class="relative bg-gray-100 rounded-2xl p-10 text-center border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer"
                     @click="fileInput?.click()">
                     <input ref="fileInput" type="file" accept="image/*" @change="handleFileUpload" class="hidden" />
-                    <div v-if="!imagePreview && !event.header_image_url" class="space-y-3">
+                    <div v-if="!imagePreview" class="space-y-3">
                         <svg class="w-12 h-12 text-gray-400 mx-auto" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -158,8 +160,7 @@
                         </div>
                     </div>
                     <div v-else class="relative">
-                        <img :src="imagePreview || event.header_image_url" alt="Preview"
-                            class="max-h-48 mx-auto rounded-lg" />
+                        <img :src="imagePreview" alt="Preview" class="max-h-48 mx-auto rounded-lg" />
                         <button type="button" @click.stop="removeImage"
                             class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,7 +173,7 @@
 
                 <button type="submit" :disabled="form.processing"
                     class="w-full bg-black text-white py-4 rounded-full font-bold text-base hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                    <span>{{ form.processing ? 'Atualizando...' : 'Atualizar Evento' }}</span>
+                    <span>{{ form.processing ? 'Criando...' : 'Criar Evento' }}</span>
                     <svg v-if="!form.processing" class="w-5 h-5 text-green-400" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
@@ -197,88 +198,32 @@ import ParticipantLimitWarning from '@/Components/ParticipantLimitWarning.vue'
 import ProBadge from '@/Components/ProBadge.vue'
 import SimpleRevenueCalculator from '@/Components/SimpleRevenueCalculator.vue'
 
-interface PriceTier {
-    id: string;
-    name: string;
-    price: number;
-    max_quantity?: number;
-    current_quantity: number;
-    is_active: boolean;
-}
-
-interface Event {
-    id: string;
-    name: string;
-    event_date: string;
-    location: string;
-    header_image_url?: string;
-    price_tiers: PriceTier[];
-    max_participants?: number;
-    is_free: boolean;
-}
-
 interface Props {
-    event: Event;
-    user_plan: string;
+    user_plan: string
 }
 
 const props = defineProps<Props>()
 
 interface EventForm {
-    name: string;
-    event_date: string;
-    event_time: string;
-    location: string;
-    price: string;
-    max_participants: string;
-    header_image: File | null;
-    is_free: boolean;
-    _method: string;
-}
-
-const formatEventDate = (dateString: string): string => {
-    if (!dateString) return '';
-
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '';
-
-        return date.toISOString().split('T')[0];
-    } catch (error) {
-        console.error('Error formatting date:', error);
-        return '';
-    }
-}
-
-const formatEventTime = (dateString: string): string => {
-    if (!dateString) return '';
-
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '';
-
-        return date.toTimeString().slice(0, 5);
-    } catch (error) {
-        console.error('Error formatting time:', error);
-        return '';
-    }
-}
-
-const getFirstPriceTierPrice = (priceTiers: PriceTier[]): string => {
-    if (!priceTiers || priceTiers.length === 0) return '';
-    return priceTiers[0]?.price?.toString() || '';
+    name: string
+    event_date: string
+    event_time: string
+    location: string
+    price: string
+    max_participants: string
+    header_image: File | null
+    is_free: boolean
 }
 
 const form = useForm<EventForm>({
-    name: props.event.name || '',
-    event_date: formatEventDate(props.event.event_date),
-    event_time: formatEventTime(props.event.event_date),
-    location: props.event.location || '',
-    price: getFirstPriceTierPrice(props.event.price_tiers),
-    max_participants: props.event.max_participants?.toString() || '',
+    name: '',
+    event_date: '',
+    event_time: '',
+    location: '',
+    price: '',
+    max_participants: '',
     header_image: null,
-    is_free: props.event.is_free || false,
-    _method: 'PUT'
+    is_free: false
 })
 
 const imagePreview = ref<string | null>(null)
@@ -295,15 +240,16 @@ const ticketPriceNumber = computed(() => {
 watch(() => form.is_free, (newValue) => {
     if (newValue) {
         form.price = '0'
-    } else if (form.price === '0') {
-        form.price = getFirstPriceTierPrice(props.event.price_tiers)
+    } else {
+        form.price = ''
     }
 })
 
-const goBack = () => router.visit(`/events/${props.event.id}`)
+const goBack = () => router.visit('/dashboard')
 
-const handleFileUpload = (event: Event & { target: HTMLInputElement }) => {
-    const file = event.target.files?.[0]
+const handleFileUpload = (e: Event) => {
+    const target = e.target as HTMLInputElement
+    const file = target.files?.[0]
     if (!file) return
 
     if (file.size > 5 * 1024 * 1024) {
@@ -313,9 +259,7 @@ const handleFileUpload = (event: Event & { target: HTMLInputElement }) => {
 
     form.header_image = file
     const reader = new FileReader()
-    reader.onload = (e) => {
-        imagePreview.value = e.target?.result as string
-    }
+    reader.onload = (ev) => (imagePreview.value = ev.target?.result as string)
     reader.readAsDataURL(file)
 }
 
@@ -341,10 +285,10 @@ const submit = () => {
         return
     }
 
-    form.post(`/events/${props.event.id}`, {
+    form.post('/events', {
         forceFormData: true,
         onSuccess: () => {
-            router.visit(`/events/${props.event.id}`, { preserveScroll: true })
+            router.visit('/dashboard', { preserveScroll: true })
         },
         onError: (errors) => {
             console.error('Erros do formulário:', errors)

@@ -201,6 +201,13 @@ import SimpleRevenueCalculator from '@/Components/SimpleRevenueCalculator.vue'
 interface Props {
     user_plan: string
 }
+interface EventResponsePage {
+    props: {
+        event?: {
+            id: number | string
+        }
+    }
+}
 
 const props = defineProps<Props>()
 
@@ -287,8 +294,12 @@ const submit = () => {
 
     form.post('/events', {
         forceFormData: true,
-        onSuccess: () => {
-            router.visit('/dashboard', { preserveScroll: true })
+        onSuccess: (page: any) => {
+            if (page.props?.event?.id) {
+                router.visit(`/events/${page.props.event.id}`)
+            } else {
+                router.visit('/dashboard')
+            }
         },
         onError: (errors) => {
             console.error('Erros do formulário:', errors)

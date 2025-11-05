@@ -324,21 +324,35 @@ class EventController extends Controller
             abort(403, 'Você não tem permissão para publicar este evento.');
         }
 
-        if (!$this->canCreateEvent($profile->plan_type, $profile->id)) {
-            return redirect()->back()->withErrors([
-                'plan_limit' => $this->getPlanLimitMessage($profile->plan_type)
-            ]);
+        if ($profile->plan_type === 'freemium') {
+            $otherActiveEventsCount = Event::where('organizer_id', $profile->id)
+                ->where('status', 'active')
+                ->where('id', '!=', $event->id)
+                ->count();
+
+            if ($otherActiveEventsCount >= 1) {
+                return redirect()->back()->withErrors([
+                    'plan_limit' => 'Plano Free permite apenas 1 evento ativo por vez. Faça upgrade para criar mais eventos.'
+                ]);
+            }
         }
 
-        $event->update([
-            'status' => 'active',
-            'is_public' => true
-        ]);
+        try {
+            $event->update([
+                'status' => 'active',
+                'is_public' => true
+            ]);
 
-        $this->cacheService->invalidateEventCaches($event->id);
-        $this->cacheService->invalidateUserCaches($profile->id);
+            $this->cacheService->invalidateEventCaches($event->id);
+            $this->cacheService->invalidateUserCaches($profile->id);
 
-        return redirect()->route('events.show', $event->id)->with('success', 'Evento publicado com sucesso!');
+            return redirect()->route('events.show', $event->id)
+                ->with('success', 'Evento publicado com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao publicar evento: ' . $e->getMessage());
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao publicar evento: ' . $e->getMessage()]);
+        }
     }
 
     public function unpublish(Request $request, Event $event)
@@ -349,15 +363,22 @@ class EventController extends Controller
             abort(403, 'Você não tem permissão para despublicar este evento.');
         }
 
-        $event->update([
-            'status' => 'draft',
-            'is_public' => false
-        ]);
+        try {
+            $event->update([
+                'status' => 'draft',
+                'is_public' => false
+            ]);
 
-        $this->cacheService->invalidateEventCaches($event->id);
-        $this->cacheService->invalidateUserCaches($profile->id);
+            $this->cacheService->invalidateEventCaches($event->id);
+            $this->cacheService->invalidateUserCaches($profile->id);
 
-        return redirect()->route('events.show', $event->id)->with('success', 'Evento despublicado com sucesso!');
+            return redirect()->route('events.show', $event->id)
+                ->with('success', 'Evento despublicado com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao despublicar evento: ' . $e->getMessage());
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao despublicar evento: ' . $e->getMessage()]);
+        }
     }
 
     public function analytics(Event $event)

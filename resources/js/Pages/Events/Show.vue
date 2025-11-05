@@ -13,7 +13,8 @@
                         </Link>
                         <div>
                             <h1 class="text-xl font-bold text-gray-900">Detalhes do Evento</h1>
-                            <p class="text-xs text-gray-600 mt-1 truncate max-w-[200px]">{{ event.name }}</p>
+                            <p class="text-xs text-gray-600 mt-1 truncate max-w-[200px]">{{ event?.name ||
+                                'Carregando...' }}</p>
                         </div>
                     </div>
 
@@ -24,7 +25,7 @@
                                 :class="statusClass">
                                 {{ statusText }}
                             </span>
-                            <span v-if="event.is_public"
+                            <span v-if="event?.is_public"
                                 class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 Público
                             </span>
@@ -35,21 +36,30 @@
                         </div>
 
                         <div class="flex gap-2">
-                            <button v-if="event.status === 'draft'" @click="publishEvent"
+                            <button v-if="event?.status === 'draft'" @click="publishEvent"
                                 class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm">
                                 Publicar
                             </button>
-                            <button v-else-if="event.status === 'active'" @click="unpublishEvent"
+                            <button v-else-if="event?.status === 'active'" @click="unpublishEvent"
                                 class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm">
                                 Despublicar
                             </button>
 
-                            <Link :href="route('events.edit', event.id)"
+                            <Link :href="route('events.edit', event?.id)"
                                 class="bg-white text-gray-700 px-4 py-2 rounded-xl font-semibold border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 text-sm">
                             Editar
                             </Link>
                         </div>
                     </div>
+                </div>
+
+                <div v-if="$page.props.flash?.success"
+                    class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-xl">
+                    {{ $page.props.flash.success }}
+                </div>
+                <div v-if="$page.props.flash?.error"
+                    class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl">
+                    {{ $page.props.flash.error }}
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -83,8 +93,9 @@
                                     <span class="text-green-600 text-xs font-semibold">+{{ growthRate }}%</span>
                                 </div>
                                 <h3 class="text-gray-600 text-xs font-medium mb-1">Receita Total</h3>
-                                <p class="text-xl font-bold text-gray-900 mb-1">R$ {{ stats.total_revenue }}</p>
-                                <p class="text-xs text-gray-500">{{ stats.pending_payments }} pendentes</p>
+                                <p class="text-xl font-bold text-gray-900 mb-1">R$ {{ stats?.total_revenue || '0,00' }}
+                                </p>
+                                <p class="text-xs text-gray-500">{{ stats?.pending_payments || 0 }} pendentes</p>
                             </div>
 
                             <div class="bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl p-4 shadow-sm">
@@ -93,15 +104,15 @@
                                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                     </div>
                                     <span class="text-blue-600 text-xs font-semibold">{{ occupancyRate }}%</span>
                                 </div>
                                 <h3 class="text-gray-600 text-xs font-medium mb-1">Convidados</h3>
-                                <p class="text-xl font-bold text-gray-900 mb-1">{{ stats.confirmed_count }} / {{
-                                    event.max_participants || '∞' }}</p>
-                                <p class="text-xs text-gray-500">{{ stats.pending_participants }} aguardando</p>
+                                <p class="text-xl font-bold text-gray-900 mb-1">{{ stats?.confirmed_count || 0 }} / {{
+                                    event?.max_participants || '∞' }}</p>
+                                <p class="text-xs text-gray-500">{{ stats?.pending_participants || 0 }} aguardando</p>
                             </div>
 
                             <div class="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl p-4 shadow-sm">
@@ -188,7 +199,7 @@
 
                     <div class="space-y-4">
                         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-                            <img v-if="event.header_image_url" :src="event.header_image_url" :alt="event.name"
+                            <img v-if="event?.header_image_url" :src="event.header_image_url" :alt="event?.name"
                                 class="w-full h-32 object-cover" />
                             <div v-else
                                 class="w-full h-32 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
@@ -215,7 +226,7 @@
                                         <div class="min-w-0 flex-1">
                                             <p class="text-xs text-gray-600">Data e Hora</p>
                                             <p class="font-medium text-gray-900 text-sm truncate">{{
-                                                formatEventDate(event.event_date) }}
+                                                formatEventDate(event?.event_date) }}
                                             </p>
                                         </div>
                                     </div>
@@ -233,7 +244,8 @@
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <p class="text-xs text-gray-600">Local</p>
-                                            <p class="font-medium text-gray-900 text-sm truncate">{{ event.location }}
+                                            <p class="font-medium text-gray-900 text-sm truncate">{{ event?.location ||
+                                                'Não definido' }}
                                             </p>
                                         </div>
                                     </div>
@@ -249,9 +261,8 @@
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <p class="text-xs text-gray-600">Tipo</p>
-                                            <p class="font-medium text-gray-900 text-sm">{{ event.is_free ? 'Gratuito' :
-                                                'Pago'
-                                            }}</p>
+                                            <p class="font-medium text-gray-900 text-sm">{{ event?.is_free ? 'Gratuito'
+                                                : 'Pago' }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -274,7 +285,7 @@
                                     <span class="font-medium text-gray-900">Compartilhar</span>
                                 </button>
 
-                                <Link :href="route('events.analytics', event.id)"
+                                <Link :href="route('events.analytics', event?.id)"
                                     class="w-full flex items-center gap-2 p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 text-sm">
                                 <div class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor"
@@ -312,7 +323,10 @@ import { Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 const props = defineProps({
-    event: Object,
+    event: {
+        type: Object,
+        default: () => ({})
+    },
     participants: {
         type: Array,
         default: () => []
@@ -329,11 +343,12 @@ const props = defineProps({
 })
 
 const eventUrl = computed(() => {
+    if (!props.event?.slug) return ''
     return `${window.location.origin}/e/${props.event.slug}`
 })
 
 const timeRemaining = computed(() => {
-    if (!props.event.event_date) return 'Data não definida'
+    if (!props.event?.event_date) return 'Data não definida'
 
     const eventDate = new Date(props.event.event_date)
     const now = new Date()
@@ -352,8 +367,8 @@ const timeRemaining = computed(() => {
 })
 
 const occupancyRate = computed(() => {
-    if (!props.event.max_participants) return 0
-    return Math.round((props.stats.confirmed_count / props.event.max_participants) * 100)
+    if (!props.event?.max_participants) return 0
+    return Math.round(((props.stats?.confirmed_count || 0) / props.event.max_participants) * 100)
 })
 
 const conversionRate = computed(() => {
@@ -368,6 +383,8 @@ const growthRate = computed(() => {
 })
 
 const statusText = computed(() => {
+    if (!props.event?.status) return 'Desconhecido'
+
     const statusMap = {
         'draft': 'Rascunho',
         'active': 'Ativo',
@@ -378,6 +395,8 @@ const statusText = computed(() => {
 })
 
 const statusClass = computed(() => {
+    if (!props.event?.status) return 'bg-gray-100 text-gray-800'
+
     const classMap = {
         'draft': 'bg-yellow-100 text-yellow-800',
         'active': 'bg-green-100 text-green-800',
@@ -388,6 +407,7 @@ const statusClass = computed(() => {
 })
 
 const formatEventDate = (dateString) => {
+    if (!dateString) return 'Data não definida'
     const date = new Date(dateString)
     return date.toLocaleString('pt-BR', {
         day: '2-digit',
@@ -404,6 +424,7 @@ const copyUrl = () => {
 }
 
 const getInitials = (name) => {
+    if (!name) return '??'
     return name
         .split(' ')
         .map(word => word.charAt(0))
@@ -431,21 +452,37 @@ const paymentStatusClass = (status) => {
 }
 
 const publishEvent = () => {
+    if (!props.event?.id) return
+
     if (confirm('Tem certeza que deseja publicar este evento? Ele ficará visível publicamente.')) {
-        router.post(route('events.publish', props.event.id))
+        router.post(route('events.publish', props.event.id), {}, {
+            onSuccess: () => {
+            },
+            onError: (errors) => {
+                console.error('Erro ao publicar evento:', errors)
+            }
+        })
     }
 }
 
 const unpublishEvent = () => {
+    if (!props.event?.id) return
+
     if (confirm('Tem certeza que deseja despublicar este evento? Ele não ficará mais visível publicamente.')) {
-        router.post(route('events.unpublish', props.event.id))
+        router.post(route('events.unpublish', props.event.id), {}, {
+            onSuccess: () => {
+            },
+            onError: (errors) => {
+                console.error('Erro ao despublicar evento:', errors)
+            }
+        })
     }
 }
 
 const shareEvent = () => {
     if (navigator.share) {
         navigator.share({
-            title: props.event.name,
+            title: props.event?.name || 'Evento',
             text: 'Confira este evento incrível!',
             url: eventUrl.value
         })
@@ -455,6 +492,7 @@ const shareEvent = () => {
 }
 
 const exportParticipants = () => {
+    if (!props.event?.id) return
     router.visit(route('events.participants.export', props.event.id))
 }
 
