@@ -17,6 +17,7 @@ class PublicEventController extends Controller
     {
         $userLat = $request->session()->get('user_lat');
         $userLng = $request->session()->get('user_lng');
+        $sort = $request->get('sort', 'distance');
 
         $eventsQuery = Event::with(['organizer', 'priceTiers' => function ($query) {
             $query->where('is_active', true);
@@ -28,6 +29,7 @@ class PublicEventController extends Controller
                 $query->where('payment_status', 'paid');
             }]);
 
+        // Add distance calculation if location is available
         if ($userLat && $userLng) {
             $eventsQuery->addSelect([
                 'distance' => DB::raw("
@@ -35,19 +37,79 @@ class PublicEventController extends Controller
                     cos(radians(longitude) - radians({$userLng})) +
                     sin(radians({$userLat})) * sin(radians(latitude))))
                 ")
-            ])
-                ->orderBy('distance')
-                ->orderBy('event_date', 'asc');
+            ]);
+
+            // Apply sorting based on user selection
+            switch ($sort) {
+                case 'date':
+                    $eventsQuery->orderBy('event_date', 'asc');
+                    break;
+                case 'participants':
+                    $eventsQuery->orderBy('confirmed_count', 'desc');
+                    break;
+                case 'distance':
+                default:
+                    $eventsQuery->orderBy('distance')->orderBy('event_date', 'asc');
+                    break;
+            }
         } else {
-            $eventsQuery->orderBy('event_date', 'asc');
+            // Default sorting when no location
+            switch ($sort) {
+                case 'participants':
+                    $eventsQuery->orderBy('confirmed_count', 'desc');
+                    break;
+                case 'date':
+                default:
+                    $eventsQuery->orderBy('event_date', 'asc');
+                    break;
+            }
         }
 
         $events = $eventsQuery->paginate(12);
+
+        // Transform events to include calculated fields
+        $events->getCollection()->transform(function ($event) {
+            $event->is_sold_out = $this->isEventSoldOut($event);
+            $event->available_slots = $this->getAvailableSlots($event);
+            return $event;
+        });
 
         return Inertia::render('Events/PublicIndex', [
             'events' => $events,
             'hasLocation' => !is_null($userLat) && !is_null($userLng),
         ]);
+    }
+
+    private function isEventSoldOut($event)
+    {
+        // Check if event reached max participants
+        if ($event->max_participants && $event->confirmed_count >= $event->max_participants) {
+            return true;
+        }
+
+        // Check if all active price tiers are sold out
+        $activeTiers = $event->priceTiers->where('is_active', true);
+        if ($activeTiers->isEmpty()) {
+            return true;
+        }
+
+        // If any tier has available slots, event is not sold out
+        foreach ($activeTiers as $tier) {
+            if (is_null($tier->max_quantity) || $tier->current_quantity < $tier->max_quantity) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function getAvailableSlots($event)
+    {
+        if ($event->max_participants) {
+            return max(0, $event->max_participants - $event->confirmed_count);
+        }
+
+        return null; // Unlimited
     }
 
     public function show($slug)
@@ -80,6 +142,7 @@ class PublicEventController extends Controller
                 'location_reveal_after_payment' => $event->location_reveal_after_payment,
                 'header_image_url' => $event->header_image_url,
                 'max_participants' => $event->max_participants,
+                'is_free' => $event->is_free,
                 'organizer' => [
                     'full_name' => $event->organizer->full_name,
                 ],
@@ -94,64 +157,8 @@ class PublicEventController extends Controller
                 ]),
             ],
             'confirmed_count' => $confirmedCount,
-            'available_slots' => $event->getAvailableSlots(),
+            'available_slots' => $this->getAvailableSlots($event),
         ]);
-    }
-
-    public function participate(Request $request, $slug)
-    {
-        $event = Event::where('slug', $slug)
-            ->where('status', 'active')
-            ->where('is_public', true)
-            ->firstOrFail();
-
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'email' => 'nullable|email',
-            'phone' => 'required|string|max:20',
-            'price_tier_id' => 'required|exists:price_tiers,id',
-        ]);
-
-        $priceTier = PriceTier::findOrFail($request->price_tier_id);
-
-        if (!$priceTier->is_active || ($priceTier->max_quantity && $priceTier->current_quantity >= $priceTier->max_quantity)) {
-            return back()->withErrors(['price_tier' => 'Este lote não está mais disponível.']);
-        }
-
-        $confirmedCount = Participant::where('event_id', $event->id)
-            ->where('payment_status', 'paid')
-            ->count();
-
-        if ($event->max_participants && $confirmedCount >= $event->max_participants) {
-            return back()->withErrors(['limit' => 'Este evento está lotado.']);
-        }
-
-        $paymentStatus = $event->is_free ? 'paid' : 'pending';
-        $confirmedAt = $event->is_free ? now() : null;
-
-        $participantData = [
-            'event_id' => $event->id,
-            'price_tier_id' => $priceTier->id,
-            'full_name' => $request->full_name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'payment_amount' => $priceTier->price,
-            'payment_status' => $paymentStatus,
-            'confirmed_at' => $confirmedAt,
-        ];
-
-        if (Auth::check() && Auth::user()->profile) {
-            $participantData['profile_id'] = Auth::user()->profile->id;
-        }
-
-        $participant = Participant::create($participantData);
-        $priceTier->increment('current_quantity');
-
-        if ($event->is_free) {
-            return redirect()->route('payment.success', $participant->id);
-        }
-
-        return redirect()->route('payment.checkout', $participant->id);
     }
 
     public function storeLocation(Request $request)

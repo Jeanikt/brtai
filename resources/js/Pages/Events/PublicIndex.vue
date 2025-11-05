@@ -1,148 +1,193 @@
 <template>
     <AuthenticatedLayout>
-        <div class="min-h-screen bg-gray-100 font-prompt">
-            <nav class="bg-white shadow-sm">
-                <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-                    <div class="flex justify-between items-center h-16">
-                        <Link :href="route('events.public.index')" class="flex items-center">
-                        <ApplicationLogo fill="black" class="w-10 h-10 sm:w-10 sm:h-10" />
-                        </Link>
+        <div class="min-h-screen font-prompt">
+            <!-- Main Content -->
+            <main class="py-2">
+                <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-2">
+                    <!-- Header Section -->
+                    <div class="text-center mb-12">
+                        <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                            Descubra Eventos Incríveis
+                        </h1>
+                        <p class="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+                            Encontre experiências únicas perto de você
+                        </p>
 
-                        <div class="flex items-center gap-4">
-                            <button @click="requestLocation"
-                                class="bg-[#82ef00] text-gray-900 px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#72df00] transition-colors">
-                                📍 Atualizar Localização
-                            </button>
-
-                            <Link v-if="$page.props.auth.user" :href="route('dashboard')"
-                                class="bg-[#FFFF00] text-black px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#FFFF33] transition-colors">
-                            Meus Eventos
-                            </Link>
-
-                            <Link v-else :href="route('login')"
-                                class="bg-[#FFFF00] text-black px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#FFFF33] transition-colors">
-                            Entrar
-                            </Link>
+                        <!-- Location Status -->
+                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
+                            :class="hasLocation ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
+                            <span v-if="hasLocation">📍</span>
+                            <span v-else>📍</span>
+                            {{ hasLocation ? 'Visualizando eventos por proximidade' : 'Ative a localização para ver eventos próximos' }}
                         </div>
                     </div>
-                </div>
-            </nav>
 
-            <main class="pt-8 pb-8">
-                <div class="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10">
-                    <div class="text-center mb-8">
-                        <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                            Eventos Públicos
-                        </h1>
-                        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-                            Descubra eventos incríveis perto de você.
-                            <span v-if="hasLocation" class="text-green-600 font-semibold">
-                                Ordenados por proximidade
-                            </span>
-                            <span v-else class="text-yellow-600 font-semibold">
-                                Ative a localização para ver eventos próximos
-                            </span>
-                        </p>
+                    <!-- Filters & Sorting -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
+                        <div class="flex flex-wrap gap-2">
+                            <button @click="setFilter('all')" :class="getFilterClass('all')">
+                                Todos
+                            </button>
+                            <button @click="setFilter('free')" :class="getFilterClass('free')">
+                                🆓 Gratuitos
+                            </button>
+                            <button @click="setFilter('paid')" :class="getFilterClass('paid')">
+                                💰 Pagos
+                            </button>
+                            <button @click="setFilter('available')" :class="getFilterClass('available')">
+                                ✅ Com Vagas
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-sm text-gray-600">
+                            <span>Ordenar por:</span>
+                            <select v-model="sortBy" @change="applySorting"
+                                class="border-0 bg-transparent font-semibold text-gray-900 focus:ring-0">
+                                <option value="distance">📍 Mais Próximos</option>
+                                <option value="date">📅 Próximas Datas</option>
+                                <option value="participants">👥 Mais Populares</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-4 mb-8 justify-center">
-                        <button @click="sortBy = 'distance'" :class="[
-                        'px-6 py-2 rounded-full text-sm font-semibold transition-colors',
-                        sortBy === 'distance'
-                            ? 'bg-[#82ef00] text-gray-900'
-                            : 'bg-white text-gray-700 border border-gray-300'
-                    ]">
-                            📍 Mais Próximos
-                        </button>
-                        <button @click="sortBy = 'date'" :class="[
-                        'px-6 py-2 rounded-full text-sm font-semibold transition-colors',
-                        sortBy === 'date'
-                            ? 'bg-[#FFFF00] text-black'
-                            : 'bg-white text-gray-700 border border-gray-300'
-                    ]">
-                            📅 Próximas Datas
-                        </button>
-                        <button @click="sortBy = 'participants'" :class="[
-                        'px-6 py-2 rounded-full text-sm font-semibold transition-colors',
-                        sortBy === 'participants'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white text-gray-700 border border-gray-300'
-                    ]">
-                            👥 Mais Populares
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Events Grid -->
+                    <div v-if="events.data.length > 0"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                         <div v-for="event in events.data" :key="event.id"
-                            class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                            <div class="h-48 bg-gray-200 relative">
+                            class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
+
+                            <!-- Event Image -->
+                            <div class="h-48 relative overflow-hidden">
                                 <img v-if="event.header_image_url" :src="event.header_image_url" :alt="event.name"
-                                    class="w-full h-full object-cover" />
+                                    class="w-full h-full object-cover transition-transform hover:scale-105 duration-300" />
                                 <div v-else
                                     class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span class="text-white text-lg font-semibold">🎉 Evento</span>
+                                    <span class="text-white text-lg font-semibold">🎉 {{ event.name }}</span>
                                 </div>
 
-                                <div v-if="event.distance !== null && event.distance !== undefined"
-                                    class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                    {{ event.distance?.toFixed(1) }} km
+                                <!-- Event Badges -->
+                                <div class="absolute top-3 left-3 flex flex-col gap-1">
+                                    <span v-if="event.is_free"
+                                        class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                        🆓 Grátis
+                                    </span>
+                                    <span v-else
+                                        class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                        💰 Pago
+                                    </span>
+                                </div>
+
+                                <div class="absolute top-3 right-3 flex flex-col gap-1">
+                                    <span v-if="event.distance !== null && event.distance !== undefined"
+                                        class="bg-black text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                        {{ event.distance?.toFixed(1) }} km
+                                    </span>
+                                    <span v-if="isEventSoldOut(event)"
+                                        class="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                        Esgotado
+                                    </span>
+                                    <span v-else-if="isEventAlmostSoldOut(event)"
+                                        class="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                        Últimas vagas
+                                    </span>
                                 </div>
                             </div>
 
-                            <div class="p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
+                            <!-- Event Content -->
+                            <div class="p-5">
+                                <!-- Event Title & Description -->
+                                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
                                     {{ event.name }}
                                 </h3>
-
-                                <p class="text-gray-600 text-sm mb-4 line-clamp-2">
-                                    {{ event.description }}
+                                <p class="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
+                                    {{ event.description || 'Uma experiência incrível te aguarda!' }}
                                 </p>
 
-                                <div class="space-y-2 mb-4">
-                                    <div class="flex items-center text-sm text-gray-600">
-                                        <span class="text-lg mr-2">📅</span>
-                                        {{ formatDate(event.event_date) }}
+                                <!-- Event Details -->
+                                <div class="space-y-3 mb-4">
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <div
+                                            class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-gray-600">📅</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-900">{{ formatDate(event.event_date) }}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center text-sm text-gray-600">
-                                        <span class="text-lg mr-2">📍</span>
-                                        {{ event.location }}
+
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <div
+                                            class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-gray-600">📍</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-900">{{ event.location }}</p>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center text-sm text-gray-600">
-                                        <span class="text-lg mr-2">👥</span>
-                                        {{ event.confirmed_count }} confirmados
+
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <div
+                                            class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-gray-600">👥</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="font-semibold text-gray-900">{{ event.confirmed_count }}
+                                                confirmados</p>
+                                            <p class="text-xs text-gray-500">
+                                                {{ getAvailabilityText(event) }}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="mb-4">
+                                <!-- Price Tiers -->
+                                <div class="mb-4 space-y-2">
                                     <div v-for="tier in event.price_tiers" :key="tier.id"
-                                        class="flex justify-between items-center py-1">
-                                        <span class="text-sm text-gray-700">{{ tier.name }}</span>
-                                        <span class="text-sm font-semibold text-gray-900">
+                                        class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-900">{{ tier.name }}</p>
+                                            <p v-if="tier.description" class="text-xs text-gray-500">{{ tier.description
+                                                }}</p>
+                                        </div>
+                                        <span class="text-sm font-bold text-gray-900">
                                             {{ formatPrice(tier.price) }}
                                         </span>
                                     </div>
                                 </div>
 
+                                <!-- Action Button -->
                                 <Link :href="route('events.public.show', event.slug)"
-                                    class="w-full bg-[#FFFF00] text-black text-center py-3 rounded-full font-semibold hover:bg-[#FFFF33] transition-colors block">
-                                Ver Detalhes
+                                    class="w-full bg-black text-white text-center py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors block">
+                                {{ getButtonText(event) }}
                                 </Link>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-8 flex justify-center">
-                        <Pagination :links="events.links" />
+                    <!-- Empty State -->
+                    <div v-else class="text-center py-16">
+                        <div class="text-gray-400 text-6xl mb-4">🎭</div>
+                        <h3 class="text-2xl font-semibold text-gray-600 mb-2">
+                            Nenhum evento encontrado
+                        </h3>
+                        <p class="text-gray-500 max-w-md mx-auto mb-6">
+                            {{
+                                currentFilter === 'all'
+                                    ? 'Não há eventos públicos disponíveis no momento.'
+                                    : `Não há eventos ${getFilterLabel()} disponíveis.`
+                            }}
+                        </p>
+                        <Link v-if="$page.props.auth.user" :href="route('events.create')"
+                            class="bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors inline-flex items-center gap-2">
+                        <span>+</span>
+                        Criar Primeiro Evento
+                        </Link>
                     </div>
 
-                    <div v-if="events.data.length === 0" class="text-center py-12">
-                        <div class="text-gray-400 text-6xl mb-4">🎭</div>
-                        <h3 class="text-xl font-semibold text-gray-600 mb-2">
-                            Nenhum evento público encontrado
-                        </h3>
-                        <p class="text-gray-500">
-                            Não há eventos públicos disponíveis no momento.
-                        </p>
+                    <!-- Pagination -->
+                    <div v-if="events.data.length > 0" class="mt-12 flex justify-center">
+                        <Pagination :links="events.links" />
                     </div>
                 </div>
             </main>
@@ -151,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 import Pagination from '@/Components/Pagination.vue'
@@ -166,6 +211,100 @@ const props = defineProps<{
 }>()
 
 const sortBy = ref('distance')
+const currentFilter = ref('all')
+
+// Computed properties for filtering
+const filteredEvents = computed(() => {
+    let filtered = [...props.events.data]
+
+    switch (currentFilter.value) {
+        case 'free':
+            filtered = filtered.filter(event => event.is_free)
+            break
+        case 'paid':
+            filtered = filtered.filter(event => !event.is_free)
+            break
+        case 'available':
+            filtered = filtered.filter(event => !isEventSoldOut(event))
+            break
+    }
+
+    return filtered
+})
+
+// Event availability helpers
+const isEventSoldOut = (event: any) => {
+    if (event.max_participants && event.confirmed_count >= event.max_participants) {
+        return true
+    }
+
+    // Check if all active price tiers are sold out
+    const activeTiers = event.price_tiers.filter((tier: any) => tier.is_active)
+    if (activeTiers.length === 0) return true
+
+    return activeTiers.every((tier: any) =>
+        tier.max_quantity && tier.current_quantity >= tier.max_quantity
+    )
+}
+
+const isEventAlmostSoldOut = (event: any) => {
+    if (!event.max_participants || isEventSoldOut(event)) return false
+
+    const remaining = event.max_participants - event.confirmed_count
+    return remaining > 0 && remaining <= 10
+}
+
+const getAvailabilityText = (event: any) => {
+    if (isEventSoldOut(event)) {
+        return 'Evento esgotado'
+    }
+
+    if (event.max_participants) {
+        const remaining = event.max_participants - event.confirmed_count
+        if (remaining <= 10) {
+            return `Apenas ${remaining} vaga${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}`
+        }
+        return `${remaining} vagas disponíveis`
+    }
+
+    return 'Vagas ilimitadas'
+}
+
+const getButtonText = (event: any) => {
+    if (isEventSoldOut(event)) {
+        return 'Esgotado'
+    }
+    return 'Ver Detalhes e Participar'
+}
+
+const getFilterClass = (filter: string) => {
+    const baseClasses = 'px-4 py-2 rounded-full text-sm font-semibold transition-colors'
+    return currentFilter.value === filter
+        ? `${baseClasses} bg-black text-white`
+        : `${baseClasses} bg-white text-gray-700 border border-gray-300 hover:border-gray-400`
+}
+
+const getFilterLabel = () => {
+    const labels: any = {
+        all: 'todos',
+        free: 'gratuitos',
+        paid: 'pagos',
+        available: 'com vagas disponíveis'
+    }
+    return labels[currentFilter.value] || 'todos'
+}
+
+// Methods
+const setFilter = (filter: string) => {
+    currentFilter.value = filter
+}
+
+const applySorting = () => {
+    router.get(route('events.public.index'), { sort: sortBy.value }, {
+        preserveState: true,
+        replace: true,
+    })
+}
 
 const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -180,7 +319,6 @@ const requestLocation = () => {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude
                 })
-
                 router.reload()
             } catch (error) {
                 console.error('Erro ao salvar localização:', error)
@@ -201,8 +339,9 @@ const requestLocation = () => {
 
 const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
+        weekday: 'short',
         day: '2-digit',
-        month: '2-digit',
+        month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
@@ -224,6 +363,5 @@ const formatPrice = (price: number) => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-clamp: 2;
 }
 </style>
