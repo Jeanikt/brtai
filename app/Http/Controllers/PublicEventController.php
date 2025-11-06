@@ -77,6 +77,7 @@ class PublicEventController extends Controller
         return Inertia::render('Events/PublicIndex', [
             'events' => $events,
             'hasLocation' => !is_null($userLat) && !is_null($userLng),
+            'isAuthenticated' => Auth::check(), // Adicionado para verificar autenticação no frontend
         ]);
     }
 
@@ -112,55 +113,6 @@ class PublicEventController extends Controller
         return null; // Unlimited
     }
 
-    public function show($slug)
-    {
-        $event = Event::with([
-            'priceTiers' => fn($query) => $query->where('is_active', true),
-            'organizer'
-        ])
-            ->where('slug', $slug)
-            ->firstOrFail();
-
-        if ($event->status !== 'active' || !$event->is_public) {
-            abort(404, 'Evento não encontrado.');
-        }
-
-        $confirmedCount = Participant::where('event_id', $event->id)
-            ->where('payment_status', 'paid')
-            ->count();
-
-        $this->incrementAnalytics($event);
-
-        return Inertia::render('Events/PublicShow', [
-            'event' => [
-                'id' => $event->id,
-                'name' => $event->name,
-                'description' => $event->description,
-                'slug' => $event->slug,
-                'event_date' => $event->event_date,
-                'location' => $event->location,
-                'location_reveal_after_payment' => $event->location_reveal_after_payment,
-                'header_image_url' => $event->header_image_url,
-                'max_participants' => $event->max_participants,
-                'is_free' => $event->is_free,
-                'organizer' => [
-                    'full_name' => $event->organizer->full_name,
-                ],
-                'price_tiers' => $event->priceTiers->map(fn($tier) => [
-                    'id' => $tier->id,
-                    'name' => $tier->name,
-                    'description' => $tier->description,
-                    'price' => $tier->price,
-                    'max_quantity' => $tier->max_quantity,
-                    'current_quantity' => $tier->current_quantity,
-                    'is_active' => $tier->is_active,
-                ]),
-            ],
-            'confirmed_count' => $confirmedCount,
-            'available_slots' => $this->getAvailableSlots($event),
-        ]);
-    }
-
     public function storeLocation(Request $request)
     {
         $request->validate([
@@ -174,27 +126,5 @@ class PublicEventController extends Controller
         ]);
 
         return response()->json(['success' => true]);
-    }
-
-    private function incrementAnalytics(Event $event)
-    {
-        $today = now()->format('Y-m-d');
-
-        $analytic = EventAnalytic::firstOrCreate(
-            [
-                'event_id' => $event->id,
-                'date' => $today,
-            ],
-            [
-                'page_views' => 0,
-                'unique_visitors' => 0,
-                'tickets_sold' => 0,
-                'total_revenue' => 0,
-                'conversion_rate' => 0,
-            ]
-        );
-
-        $analytic->increment('page_views');
-        $analytic->increment('unique_visitors');
     }
 }

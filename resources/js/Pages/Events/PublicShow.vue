@@ -4,7 +4,7 @@
             <div class="max-w-4xl mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10  rounded-xl flex items-center justify-center">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center">
                             <ApplicationLogo fill="black" class="w-10 h-10" />
                         </div>
                         <div>
@@ -22,6 +22,16 @@
         </header>
 
         <div class="max-w-2xl mx-auto px-4 py-6">
+            <!-- Flash Messages -->
+            <div v-if="$page.props.flash.error"
+                class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">
+                {{ $page.props.flash.error }}
+            </div>
+            <div v-if="$page.props.flash.success"
+                class="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl text-green-700 text-sm">
+                {{ $page.props.flash.success }}
+            </div>
+
             <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                 <div class="relative h-48 overflow-hidden">
                     <img v-if="event.header_image_url" :src="event.header_image_url" :alt="event.name"
@@ -137,7 +147,75 @@
                         </div>
                     </div>
 
-                    <div v-if="selectedTier" class="bg-gray-50 rounded-2xl p-6">
+                    <!-- Modal de Autenticação -->
+                    <div v-if="showAuthModal"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl max-w-md w-full">
+                            <!-- Header do Modal -->
+                            <div class="p-6 border-b border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-gray-900">Conta necessária</h3>
+                                    <button @click="showAuthModal = false" class="text-gray-400 hover:text-gray-600">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p class="text-gray-600 text-sm mt-2">
+                                    Você precisa criar uma conta ou fazer login para finalizar a compra.
+                                </p>
+                            </div>
+
+                            <!-- Conteúdo do Modal -->
+                            <div class="p-6 space-y-4">
+                                <!-- Botões de Ação -->
+                                <div class="space-y-3">
+                                    <Link :href="route('login', { return_url: $page.url })"
+                                        class="w-full bg-amber-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-amber-700 transition-colors block">
+                                    Fazer Login
+                                    </Link>
+                                    <Link :href="route('register', { return_url: $page.url })"
+                                        class="w-full bg-black text-white text-center py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors block">
+                                    Criar Conta
+                                    </Link>
+                                </div>
+
+                                <!-- Divisor -->
+                                <div class="relative flex items-center py-4">
+                                    <div class="flex-grow border-t border-gray-300"></div>
+                                    <span class="flex-shrink mx-4 text-gray-500 text-sm">ou</span>
+                                    <div class="flex-grow border-t border-gray-300"></div>
+                                </div>
+
+                                <!-- Login Social -->
+                                <div class="space-y-3">
+                                    <a :href="route('google.redirect', { return_url: $page.url })"
+                                        class="w-full h-12 flex items-center justify-center gap-3 rounded-xl font-medium transition-all duration-200 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path
+                                                d="M18.1712 8.36791H17.9998V8.33325H9.99984V11.6666H14.7098C14.0223 13.6074 12.1762 14.9999 9.99984 14.9999C7.23859 14.9999 4.99984 12.7612 4.99984 9.99992C4.99984 7.23867 7.23859 4.99992 9.99984 4.99992C11.2748 4.99992 12.434 5.48075 13.3173 6.26625L15.674 3.90959C14.1857 2.52125 12.1948 1.66658 9.99984 1.66658C5.39734 1.66658 1.6665 5.39741 1.6665 9.99992C1.6665 14.6024 5.39734 18.3333 9.99984 18.3333C14.6023 18.3333 18.3332 14.6024 18.3332 9.99992C18.3332 9.44125 18.2757 8.89575 18.1712 8.36791Z"
+                                                fill="#FFC107" />
+                                            <path
+                                                d="M2.62744 6.12125L5.36536 8.12917C6.10619 6.29417 7.90036 4.99992 9.99994 4.99992C11.2749 4.99992 12.4341 5.48075 13.3174 6.26625L15.6741 3.90959C14.1858 2.52125 12.1949 1.66658 9.99994 1.66658C6.79911 1.66658 4.02327 3.47375 2.62744 6.12125Z"
+                                                fill="#FF3D00" />
+                                            <path
+                                                d="M10 18.3333C12.1525 18.3333 14.1084 17.5096 15.5871 16.17L13.0079 13.9875C12.1432 14.6452 11.0865 15.0009 10 15C7.83253 15 5.99211 13.6179 5.29878 11.6892L2.5813 13.7829C3.96047 16.4817 6.7613 18.3333 10 18.3333Z"
+                                                fill="#4CAF50" />
+                                            <path
+                                                d="M18.1712 8.36791H17.9998V8.33325H9.99984V11.6666H14.7098C14.3807 12.5902 13.7589 13.3971 12.9407 13.9871L12.9398 13.9862L15.519 16.1687C15.3657 16.3062 18.3332 14.1666 18.3332 9.99992C18.3332 9.44125 18.2757 8.89575 18.1712 8.36791Z"
+                                                fill="#1976D2" />
+                                        </svg>
+                                        <span class="text-sm">Continuar com Google</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulário de Participação (apenas para usuários autenticados) -->
+                    <div v-if="selectedTier && $page.props.auth.user" class="bg-gray-50 rounded-2xl p-6">
                         <h3 class="text-lg font-bold text-gray-900 mb-2">🎯 Finalizar Inscrição</h3>
                         <p class="text-gray-600 text-sm mb-4">Preencha os dados para garantir sua vaga</p>
 
@@ -222,7 +300,7 @@
                                 <div class="space-y-2">
                                     <div class="flex justify-between items-center">
                                         <span class="text-gray-600 text-sm">{{ selectedTier.name }} × {{ ticketQuantity
-                                        }}</span>
+                                            }}</span>
                                         <span class="text-base font-bold text-gray-900">
                                             {{ event.is_free ? 'Grátis' : `R$ ${(selectedTier.price *
                                                 ticketQuantity).toFixed(2)}` }}
@@ -282,19 +360,22 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
 const props = defineProps({
     event: Object,
     confirmed_count: Number,
-    available_slots: Number
+    available_slots: Number,
+    isAuthenticated: Boolean
 })
 
 const selectedTier = ref(null)
 const hasPaid = ref(false)
 const ticketQuantity = ref(1)
+const showAuthModal = ref(false)
 
 const form = useForm({
     participants: [
@@ -357,10 +438,21 @@ const selectTicket = (tier) => {
     if (tier.is_active && (!tier.max_quantity || tier.current_quantity < tier.max_quantity)) {
         selectedTier.value = tier
         form.price_tier_id = tier.id
+
+        // Se não estiver autenticado, mostrar modal
+        if (!props.isAuthenticated) {
+            showAuthModal.value = true
+        }
     }
 }
 
 const submitParticipation = () => {
+    // Verificar se o usuário está autenticado
+    if (!props.isAuthenticated) {
+        showAuthModal.value = true
+        return
+    }
+
     const participantsData = form.participants.map(participant => {
         return {
             ...participant,
@@ -389,6 +481,7 @@ const submitParticipation = () => {
     }, {
         onStart: () => form.processing = true,
         onFinish: () => form.processing = false,
+        preserveScroll: true,
     });
 }
 
