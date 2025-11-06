@@ -31,11 +31,6 @@ class WooviService
                 'Accept' => 'application/json',
             ]
         ]);
-
-        Log::info('WooviService initialized', [
-            'app_id' => $this->appId ? '***' . substr($this->appId, -4) : 'NULL',
-            'base_url' => $this->baseUrl
-        ]);
     }
 
     public function createCharge($data)
