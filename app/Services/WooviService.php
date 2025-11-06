@@ -31,6 +31,11 @@ class WooviService
                 'Accept' => 'application/json',
             ]
         ]);
+
+        Log::info('WooviService initialized', [
+            'app_id' => $this->appId ? '***' . substr($this->appId, -4) : 'NULL',
+            'base_url' => $this->baseUrl
+        ]);
     }
 
     public function createCharge($data)
@@ -39,16 +44,14 @@ class WooviService
             'correlationID' => $data['correlation_id'],
             'value' => $data['value'],
             'comment' => $data['comment'],
-            'type' => 'DYNAMIC', // Campo OBRIGATÓRIO
+            'type' => 'DYNAMIC',
             'expiresIn' => 1800, // 30 minutos em segundos
         ];
 
-        // Adicionar customer se existir
         if (isset($data['customer'])) {
             $payload['customer'] = $data['customer'];
         }
 
-        // Adicionar additionalInfo se existir
         if (isset($data['additional_info']) && !empty($data['additional_info'])) {
             $payload['additionalInfo'] = $data['additional_info'];
         }
@@ -61,7 +64,6 @@ class WooviService
         ]);
 
         try {
-            // Adicionar return_existing=true para idempotência
             $response = $this->client->post('/api/v1/charge?return_existing=true', [
                 'json' => $payload
             ]);
@@ -179,5 +181,12 @@ class WooviService
     public function generateQrCodeImageUrl($correlationID)
     {
         return $this->baseUrl . "/openpix/charge/brcode/image/{$correlationID}.png";
+    }
+
+    public function verifyWebhookSignature($payload, $signature)
+    {
+        // A Woovi usa o AppID como chave para assinar webhooks
+        $expectedSignature = hash_hmac('sha256', $payload, $this->appId);
+        return hash_equals($expectedSignature, $signature);
     }
 }

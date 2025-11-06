@@ -90,6 +90,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/payment/{participant}/success', [PaymentController::class, 'success'])->name('payment.success');
     Route::get('/payment/{participant}/status', [PaymentController::class, 'status'])->name('payment.status');
 
+    // Subscription routes
+    Route::post('/settings/cancel-subscription', [SettingsController::class, 'cancelSubscription'])->name('settings.cancel-subscription');
+    Route::get('/settings/subscription-status/{subscriptionId}', [SettingsController::class, 'checkUpgradeStatus'])->name('settings.subscription-status');
+
+
     // Earnings
     Route::get('/earnings', [EarningsController::class, 'index'])->name('earnings.index');
     Route::post('/earnings/account', [EarningsController::class, 'storeAccount'])->name('earnings.account.store');

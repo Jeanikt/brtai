@@ -61,7 +61,7 @@ class PaymentTransaction extends Model
     public function calculateNetAmount()
     {
         $feePercentage = $this->participant->event->organizer->isPro() ? 0.055 : 0.065;
-        $fixedFee = 0.80;
+        $fixedFee = 0.85;
 
         $this->fee_amount = ($this->amount * $feePercentage) + $fixedFee;
         $this->net_amount = $this->amount - $this->fee_amount;

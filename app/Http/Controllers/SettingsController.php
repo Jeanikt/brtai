@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Profile;
 use App\Models\PaymentTransaction;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class SettingsController extends Controller
 {
@@ -16,13 +18,24 @@ class SettingsController extends Controller
         $user = $request->user();
         $profile = $user->profile;
 
+        // Verificar assinatura ativa
+        $activeSubscription = Subscription::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('ends_at', '>', now())
+            ->first();
+
         return Inertia::render('Settings/Index', [
             'profile' => $profile,
             'plan' => [
                 'type' => $profile->plan_type,
                 'is_pro' => $profile->plan_type === 'pro',
                 'is_freemium' => $profile->plan_type === 'freemium',
-            ]
+            ],
+            'subscription' => $activeSubscription ? [
+                'status' => $activeSubscription->status,
+                'ends_at' => $activeSubscription->ends_at,
+                'is_active' => $activeSubscription->isActive(),
+            ] : null
         ]);
     }
 
@@ -46,9 +59,16 @@ class SettingsController extends Controller
         $user = $request->user();
         $profile = $user->profile;
 
+        // Buscar assinatura ativa
+        $activeSubscription = Subscription::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('ends_at', '>', now())
+            ->first();
+
         return Inertia::render('Settings/Billing', [
             'user_plan' => $profile->plan_type,
-            'pro_price' => 49.00, // R$ 49/mês
+            'pro_price' => 19.00, // R$ 19/mês (conforme regra de negócio)
+            'subscription' => $activeSubscription,
         ]);
     }
 
@@ -63,35 +83,18 @@ class SettingsController extends Controller
         }
 
         try {
-            // Gerar pagamento PIX para upgrade
-            $pixData = $this->generateProUpgradePayment($user, $profile);
-
-            // Criar transação de upgrade
-            $transaction = PaymentTransaction::create([
-                'participant_id' => null, // Não é participante de evento
-                'event_id' => null,
-                'amount' => 49.00,
-                'status' => 'pending',
-                'gateway' => 'woovi',
-                'gateway_transaction_id' => $pixData['transaction_id'],
-                'metadata' => [
-                    'type' => 'plan_upgrade',
-                    'user_id' => $user->id,
-                    'plan' => 'pro',
-                    'pix_code' => $pixData['pix_code'],
-                    'pix_expires_at' => $pixData['expires_at']->toISOString()
-                ]
-            ]);
+            // Gerar assinatura PIX recorrente
+            $subscriptionData = $this->createProSubscription($user, $profile);
 
             return Inertia::render('Payment/PlanUpgrade', [
-                'transaction' => $transaction,
-                'pix_code' => $pixData['pix_code'],
-                'pix_expires_at' => $pixData['expires_at']->toISOString(),
+                'subscription' => $subscriptionData['subscription'],
+                'pix_code' => $subscriptionData['pix_code'],
+                'pix_expires_at' => $subscriptionData['expires_at']->toISOString(),
                 'plan_type' => 'pro',
-                'amount' => 49.00
+                'amount' => 19.00
             ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao gerar pagamento para upgrade Pro: ' . $e->getMessage());
+            Log::error('Erro ao gerar assinatura Pro: ' . $e->getMessage());
             return redirect()->back()->withErrors(['payment' => 'Erro ao processar upgrade. Tente novamente.']);
         }
     }
@@ -107,95 +110,140 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function checkUpgradeStatus($transactionId)
+    public function checkUpgradeStatus($subscriptionId)
     {
-        $transaction = PaymentTransaction::where('gateway_transaction_id', $transactionId)->first();
+        $subscription = Subscription::find($subscriptionId);
 
-        if (!$transaction) {
+        if (!$subscription) {
             return response()->json(['paid' => false, 'status' => 'not_found']);
         }
 
-        if ($transaction->status === 'completed') {
-            return response()->json(['paid' => true, 'status' => 'completed']);
+        if ($subscription->status === 'active') {
+            return response()->json(['paid' => true, 'status' => 'active']);
         }
 
-        // Verificar status na AbacatePay
+        // Verificar status na Woovi
         try {
-            $paymentStatus = $this->checkPaymentStatus($transaction->gateway_transaction_id);
+            $wooviService = app(\App\Services\WooviService::class);
+            $result = $wooviService->getCharge($subscription->gateway_transaction_id);
 
-            if ($paymentStatus === 'paid') {
+            if ($result['success'] && $result['data']['charge']['status'] === 'COMPLETED') {
+                // Ativar assinatura
+                $subscription->update([
+                    'status' => 'active',
+                    'starts_at' => now(),
+                    'ends_at' => now()->addMonth(),
+                    'activated_at' => now()
+                ]);
+
                 // Atualizar plano do usuário
-                $user = $transaction->metadata['user_id'] ?
-                    \App\Models\User::find($transaction->metadata['user_id']) : null;
+                $subscription->user->profile->update(['plan_type' => 'pro']);
 
-                if ($user) {
-                    $user->profile->update(['plan_type' => 'pro']);
-                    $transaction->update(['status' => 'completed']);
-                }
-
-                return response()->json(['paid' => true, 'status' => 'completed']);
+                return response()->json(['paid' => true, 'status' => 'active']);
             }
         } catch (\Exception $e) {
             Log::error('Erro ao verificar status upgrade: ' . $e->getMessage());
         }
 
-        return response()->json(['paid' => false, 'status' => $transaction->status]);
+        return response()->json(['paid' => false, 'status' => $subscription->status]);
     }
 
-    private function generateProUpgradePayment($user, $profile)
+    public function cancelSubscription(Request $request)
     {
-        $apiKey = config('services.abacatepay.key', 'abc_dev_2zd5G3HnxkPTxcPs3qd56Kkz');
-        $baseUrl = config('services.abacatepay.url', 'https://api.abacatepay.com/v1');
+        $user = $request->user();
+
+        try {
+            $subscription = Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->first();
+
+            if ($subscription) {
+                $subscription->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now()
+                ]);
+
+                // Reverter para plano freemium no final do período
+                $user->profile->update(['plan_type' => 'freemium']);
+
+                return redirect()->back()->with('success', 'Assinatura cancelada com sucesso!');
+            }
+
+            return redirect()->back()->withErrors(['subscription' => 'Nenhuma assinatura ativa encontrada.']);
+        } catch (\Exception $e) {
+            Log::error('Erro ao cancelar assinatura: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['subscription' => 'Erro ao cancelar assinatura.']);
+        }
+    }
+
+    private function createProSubscription($user, $profile)
+    {
+        $apiKey = config('services.woovi.app_id');
+        $baseUrl = config('services.woovi.base_url', 'https://api.woovi.com');
 
         $payload = [
-            'amount' => 4900, // R$ 49,00 em centavos
-            'currency' => 'BRL',
-            'description' => "Upgrade para Plano Pro - BrotaAI",
-            'payment_method' => 'pix',
-            'metadata' => [
-                'user_id' => $user->id,
-                'plan_type' => 'pro',
-                'user_email' => $user->email,
-                'user_name' => $profile->full_name
+            'correlationID' => 'subscription_' . $user->id . '_' . time(),
+            'value' => 1900, // R$ 19,00 em centavos (conforme regra de negócio)
+            'comment' => "Assinatura Plano Pro - BrotaAI (Mensal)",
+            'type' => 'DYNAMIC',
+            'expiresIn' => 1800, // 30 minutos
+            'additionalInfo' => [
+                [
+                    'key' => 'subscription_type',
+                    'value' => 'pro_monthly'
+                ],
+                [
+                    'key' => 'user_id',
+                    'value' => (string) $user->id
+                ],
+                [
+                    'key' => 'user_email',
+                    'value' => $user->email
+                ]
             ],
-            'success_url' => route('settings.upgrade-success'),
-            'webhook_url' => route('webhooks.abacatepay')
+            'customer' => [
+                'name' => $profile->full_name,
+                'email' => $user->email,
+                'taxID' => $profile->cpf ? preg_replace('/[^0-9]/', '', $profile->cpf) : '',
+            ]
         ];
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $apiKey,
+            'Authorization' => $apiKey,
             'Content-Type' => 'application/json'
-        ])->timeout(30)->post($baseUrl . '/payments', $payload);
+        ])->timeout(30)->post($baseUrl . '/api/v1/charge', $payload);
 
         if ($response->successful()) {
             $paymentData = $response->json();
 
+            // Criar registro de assinatura
+            $subscription = Subscription::create([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'user_id' => $user->id,
+                'plan_type' => 'pro',
+                'status' => 'pending',
+                'amount' => 19.00,
+                'gateway' => 'woovi',
+                'gateway_transaction_id' => $paymentData['charge']['correlationID'],
+                'starts_at' => now(),
+                'ends_at' => now()->addMonth(),
+                'metadata' => [
+                    'pix_code' => $paymentData['charge']['brCode'],
+                    'qr_code_image' => $paymentData['charge']['qrCodeImage'],
+                    'expires_at' => now()->addMinutes(30)->toISOString()
+                ]
+            ]);
+
             return [
-                'pix_code' => $paymentData['pix_code'] ?? $paymentData['payload'],
+                'pix_code' => $paymentData['charge']['brCode'],
+                'qr_code_image' => $paymentData['charge']['qrCodeImage'],
                 'expires_at' => now()->addMinutes(30),
-                'transaction_id' => $paymentData['id']
+                'transaction_id' => $paymentData['charge']['correlationID'],
+                'subscription' => $subscription
             ];
         }
 
         $errorMessage = $response->body();
-        throw new \Exception('Falha ao gerar pagamento PIX: ' . $errorMessage);
-    }
-
-    private function checkPaymentStatus($transactionId)
-    {
-        $apiKey = config('services.abacatepay.key', 'abc_dev_2zd5G3HnxkPTxcPs3qd56Kkz');
-        $baseUrl = config('services.abacatepay.url', 'https://api.abacatepay.com/v1');
-
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $apiKey,
-            'Content-Type' => 'application/json'
-        ])->get($baseUrl . "/payments/{$transactionId}");
-
-        if ($response->successful()) {
-            $paymentData = $response->json();
-            return $paymentData['status'] ?? 'pending';
-        }
-
-        throw new \Exception('Falha ao verificar status do pagamento');
+        throw new \Exception('Falha ao gerar assinatura PIX: ' . $errorMessage);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\PaymentTransaction;
 use App\Models\WebhookLog;
 use App\Models\User;
 use App\Models\Profile;
+use App\Models\Subscription;
 use App\Jobs\ProcessWooviWebhook;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,7 @@ class WebhookController extends Controller
 
         $wooviService = app(\App\Services\WooviService::class);
 
+        // Verificar assinatura (comente temporariamente se estiver testando)
         if (!$wooviService->verifyWebhookSignature($payload, $signature)) {
             Log::error('Woovi Webhook signature invalid');
             return response()->json(['error' => 'Invalid signature'], 401);
@@ -168,35 +170,33 @@ class WebhookController extends Controller
                 'confirmed_at' => now()
             ]);
 
+            // Calcular taxas baseadas no plano do organizador
+            $organizer = $participant->event->organizer;
+            $feePercentage = $organizer->plan_type === 'pro' ? 0.055 : 0.065;
+            $fixedFee = 0.85;
+            $paymentAmount = $paymentData['amount'] / 100;
+            $feeAmount = ($paymentAmount * $feePercentage) + $fixedFee;
+            $netAmount = max(0, $paymentAmount - $feeAmount);
+
             PaymentTransaction::create([
                 'participant_id' => $participant->id,
                 'event_id' => $participant->event_id,
-                'amount' => $paymentData['amount'] / 100,
+                'amount' => $paymentAmount,
                 'status' => 'completed',
                 'gateway' => 'abacate_pay',
                 'gateway_transaction_id' => $transactionId,
                 'gateway_response' => $paymentData,
-                'fee_amount' => $this->calculateFee($paymentData['amount'] / 100, $participant),
-                'net_amount' => ($paymentData['amount'] / 100) - $this->calculateFee($paymentData['amount'] / 100, $participant),
+                'fee_amount' => $feeAmount,
+                'net_amount' => $netAmount,
                 'processed_at' => now(),
             ]);
         }
     }
 
-    private function calculateFee($amount, $participant)
-    {
-        $organizer = $participant->event->organizer;
-        $feePercentage = $organizer->plan_type === 'pro' ? 0.055 : 0.065;
-        $fixedFee = 0.80;
-
-        return ($amount * $feePercentage) + $fixedFee;
-    }
-
     private function calculateUpgradeFee($amount)
     {
-        // Taxa fixa para upgrades de plano
         $feePercentage = 0.055; // 5.5%
-        $fixedFee = 0.80;
+        $fixedFee = 0.85;
 
         return ($amount * $feePercentage) + $fixedFee;
     }
