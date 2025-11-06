@@ -7,10 +7,41 @@ use App\Models\PaymentTransaction;
 use App\Models\WebhookLog;
 use App\Models\User;
 use App\Models\Profile;
+use App\Jobs\ProcessWooviWebhook;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
+    public function handleWoovi(Request $request)
+    {
+        Log::info('Woovi Webhook Received', ['payload' => $request->all()]);
+
+        // Validar assinatura do webhook
+        $signature = $request->header('X-Webhook-Signature');
+        $payload = $request->getContent();
+
+        $wooviService = app(\App\Services\WooviService::class);
+
+        if (!$wooviService->verifyWebhookSignature($payload, $signature)) {
+            Log::error('Woovi Webhook signature invalid');
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
+
+        // Log do webhook
+        $webhookLog = WebhookLog::create([
+            'source' => 'woovi',
+            'event_type' => $request->input('event', 'unknown'),
+            'payload' => $request->all(),
+            'received_at' => now(),
+        ]);
+
+        // Processar webhook em background
+        ProcessWooviWebhook::dispatch($webhookLog);
+
+        return response()->json(['success' => true]);
+    }
+
     public function handleAbacatePay(Request $request)
     {
         $payload = $request->all();

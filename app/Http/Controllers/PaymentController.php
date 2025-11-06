@@ -4,15 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Participant;
 use App\Models\PaymentTransaction;
+use App\Services\WooviService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
-    private $apiKey = 'abc_dev_2zd5G3HnxkPTxcPs3qd56Kkz';
-    private $baseUrl = 'https://api.abacatepay.com/v1';
+    private $wooviService;
+
+    public function __construct(WooviService $wooviService)
+    {
+        $this->wooviService = $wooviService;
+    }
 
     public function checkout($participantId)
     {
@@ -22,22 +26,50 @@ class PaymentController extends Controller
             return redirect()->route('payment.success', $participant->id);
         }
 
+        // Gerar ou reutilizar PIX
         if (!$participant->pix_code || $participant->isPixExpired()) {
             try {
+                Log::info('Generating new PIX payment for participant', [
+                    'participant_id' => $participant->id,
+                    'event_id' => $participant->event_id,
+                    'current_pix_code' => $participant->pix_code ? 'exists' : 'null',
+                    'pix_expired' => $participant->isPixExpired() ? 'yes' : 'no'
+                ]);
+
                 $pixData = $this->generatePixPayment($participant);
+
                 $participant->update([
                     'pix_code' => $pixData['pix_code'],
                     'pix_expires_at' => $pixData['expires_at'],
-                    'transaction_id' => $pixData['transaction_id']
+                    'transaction_id' => $pixData['transaction_id'],
+                    'pix_qr_code' => $pixData['qr_code_image'],
+                    'payment_amount' => $participant->priceTier->price,
+                ]);
+
+                Log::info('PIX payment generated successfully', [
+                    'participant_id' => $participant->id,
+                    'transaction_id' => $pixData['transaction_id'],
+                    'expires_at' => $pixData['expires_at']
                 ]);
             } catch (\Exception $e) {
+                Log::error('Erro ao gerar PIX: ' . $e->getMessage(), [
+                    'participant_id' => $participant->id,
+                    'event_id' => $participant->event_id,
+                    'exception_trace' => $e->getTraceAsString()
+                ]);
                 return back()->withErrors(['payment' => 'Erro ao gerar pagamento PIX: ' . $e->getMessage()]);
             }
+        } else {
+            Log::info('Reusing existing PIX payment', [
+                'participant_id' => $participant->id,
+                'transaction_id' => $participant->transaction_id
+            ]);
         }
 
         return Inertia::render('Payment/Checkout', [
-            'participant' => $participant,
+            'participant' => $participant->load('event.organizer'),
             'pix_code' => $participant->pix_code,
+            'pix_qr_code' => $participant->pix_qr_code,
             'pix_expires_at' => $participant->pix_expires_at,
         ]);
     }
@@ -51,7 +83,10 @@ class PaymentController extends Controller
             Log::info('Participant found:', [$participant->toArray()]);
 
             if (!$participant->isPaid()) {
-                Log::warning('Participant not paid, redirecting to checkout');
+                Log::warning('Participant not paid, redirecting to checkout', [
+                    'participant_id' => $participant->id,
+                    'payment_status' => $participant->payment_status
+                ]);
                 return redirect()->route('payment.checkout', $participant->id);
             }
 
@@ -97,10 +132,51 @@ class PaymentController extends Controller
     {
         $participant = Participant::findOrFail($participantId);
 
-        return response()->json([
-            'paid' => $participant->isPaid(),
-            'status' => $participant->payment_status,
+        Log::info('Checking payment status for participant', [
+            'participant_id' => $participantId,
+            'transaction_id' => $participant->transaction_id,
+            'current_status' => $participant->payment_status
         ]);
+
+        if (!$participant->transaction_id) {
+            Log::warning('No transaction ID found for participant', ['participant_id' => $participantId]);
+            return response()->json(['paid' => false]);
+        }
+
+        // Verificar status na Woovi
+        $result = $this->wooviService->getCharge($participant->transaction_id);
+
+        if ($result['success']) {
+            $charge = $result['data']['charge'];
+            $isPaid = $charge['status'] === 'COMPLETED';
+
+            Log::info('Woovi charge status check', [
+                'participant_id' => $participantId,
+                'charge_status' => $charge['status'],
+                'is_paid' => $isPaid,
+                'current_participant_status' => $participant->payment_status
+            ]);
+
+            if ($isPaid && $participant->payment_status !== 'paid') {
+                Log::info('Marking participant as paid', ['participant_id' => $participantId]);
+                $participant->markAsPaid();
+
+                // Registrar transação
+                $this->createPaymentTransaction($participant, $charge);
+            }
+
+            return response()->json([
+                'paid' => $isPaid,
+                'status' => $charge['status'],
+            ]);
+        } else {
+            Log::error('Error checking Woovi charge status', [
+                'participant_id' => $participantId,
+                'error' => $result['error'] ?? 'Unknown error'
+            ]);
+        }
+
+        return response()->json(['paid' => false]);
     }
 
     private function generatePixPayment(Participant $participant)
@@ -108,36 +184,107 @@ class PaymentController extends Controller
         $event = $participant->event;
         $priceTier = $participant->priceTier;
 
-        $payload = [
-            'amount' => (float) $priceTier->price * 100,
-            'currency' => 'BRL',
-            'description' => "Ingresso: {$event->name} - {$priceTier->name} - {$participant->full_name}",
-            'payment_method' => 'pix',
-            'metadata' => [
-                'participant_id' => $participant->id,
-                'event_id' => $event->id,
-                'price_tier_id' => $priceTier->id,
-                'participant_cpf' => $participant->cpf,
-                'participant_name' => $participant->full_name
+        $value = $event->is_free ? 0 : $priceTier->price;
+
+        // Converter para centavos (Woovi espera valores inteiros em centavos)
+        $valueInCents = (int) ($value * 100);
+
+        $chargeData = [
+            'correlation_id' => 'participant_' . $participant->id . '_' . time(),
+            'value' => $valueInCents,
+            'comment' => "Ingresso: {$event->name} - {$participant->full_name}",
+            'additional_info' => [
+                [
+                    'key' => 'participant_id',
+                    'value' => (string) $participant->id,
+                ],
+                [
+                    'key' => 'event_id',
+                    'value' => (string) $event->id,
+                ],
+                [
+                    'key' => 'participant_name',
+                    'value' => $participant->full_name,
+                ],
+                [
+                    'key' => 'participant_cpf',
+                    'value' => $participant->cpf,
+                ]
             ],
-            'success_url' => route('payment.success', $participant->id),
-            'webhook_url' => route('webhooks.abacatepay')
+            'customer' => [
+                'name' => $participant->full_name,
+                'email' => $participant->email,
+                'phone' => $participant->phone,
+                'taxID' => $participant->cpf,
+            ]
         ];
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->apiKey,
-            'Content-Type' => 'application/json'
-        ])->post($this->baseUrl . '/payments', $payload);
+        Log::info('Attempting to generate PIX payment via Woovi', [
+            'participant_id' => $participant->id,
+            'value' => $value,
+            'value_in_cents' => $valueInCents,
+            'correlation_id' => $chargeData['correlation_id'],
+            'event_name' => $event->name
+        ]);
 
-        if ($response->successful()) {
-            $paymentData = $response->json();
-            return [
-                'pix_code' => $paymentData['pix_code'],
-                'expires_at' => now()->addMinutes(30),
-                'transaction_id' => $paymentData['id']
-            ];
+        $result = $this->wooviService->createCharge($chargeData);
+
+        if (!$result['success']) {
+            Log::error('Failed to generate PIX payment via Woovi', [
+                'participant_id' => $participant->id,
+                'error' => $result['error'],
+                'charge_data' => $chargeData
+            ]);
+            throw new \Exception('Erro ao criar cobrança PIX: ' . $result['error']);
         }
 
-        throw new \Exception('Falha ao gerar pagamento PIX: ' . $response->body());
+        $charge = $result['data']['charge'];
+
+        Log::info('PIX payment created successfully via Woovi', [
+            'participant_id' => $participant->id,
+            'correlation_id' => $charge['correlationID'],
+            'brcode' => isset($charge['brCode']) ? 'present' : 'missing',
+            'pixKey' => isset($charge['pixKey']) ? 'present' : 'missing',
+            'qrCodeImage' => isset($charge['qrCodeImage']) ? 'present' : 'missing'
+        ]);
+
+        return [
+            'pix_code' => $charge['brCode'] ?? $charge['pixKey'],
+            'qr_code_image' => $charge['qrCodeImage'] ?? $this->wooviService->generateQrCodeImageUrl($charge['correlationID']),
+            'expires_at' => now()->addMinutes(30),
+            'transaction_id' => $charge['correlationID'],
+        ];
+    }
+
+    private function createPaymentTransaction(Participant $participant, array $chargeData)
+    {
+        $organizer = $participant->event->organizer;
+        $feePercentage = $organizer->isPro() ? 0.055 : 0.065;
+        $fixedFee = 0.80;
+        $paymentAmount = $participant->payment_amount ?? $participant->priceTier->price;
+
+        $feeAmount = ($paymentAmount * $feePercentage) + $fixedFee;
+        $netAmount = $paymentAmount - $feeAmount;
+
+        Log::info('Creating payment transaction', [
+            'participant_id' => $participant->id,
+            'payment_amount' => $paymentAmount,
+            'fee_amount' => $feeAmount,
+            'net_amount' => $netAmount,
+            'organizer_plan' => $organizer->plan_type
+        ]);
+
+        return PaymentTransaction::create([
+            'participant_id' => $participant->id,
+            'event_id' => $participant->event_id,
+            'amount' => $paymentAmount,
+            'status' => 'completed',
+            'gateway' => 'woovi',
+            'gateway_transaction_id' => $chargeData['correlationID'],
+            'gateway_response' => $chargeData,
+            'fee_amount' => $feeAmount,
+            'net_amount' => $netAmount,
+            'processed_at' => now(),
+        ]);
     }
 }

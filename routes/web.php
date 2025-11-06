@@ -10,6 +10,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\EarningsController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PublicEventController;
 use App\Http\Controllers\RoadmapController;
@@ -48,6 +49,7 @@ Route::post('/e/{event:slug}/participate', [EventPublicController::class, 'parti
     ->name('events.public.participate');
 
 Route::post('/webhooks/abacatepay', [WebhookController::class, 'handleAbacatePay']);
+Route::post('/webhooks/woovi', [WebhookController::class, 'handleWoovi'])->name('webhooks.woovi');
 
 // ROTAS PROTEGIDAS - EXIGEM AUTENTICAÇÃO
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -87,6 +89,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/payment/{participant}/checkout', [PaymentController::class, 'checkout'])->name('payment.checkout');
     Route::get('/payment/{participant}/success', [PaymentController::class, 'success'])->name('payment.success');
     Route::get('/payment/{participant}/status', [PaymentController::class, 'status'])->name('payment.status');
+
+    // Earnings
+    Route::get('/earnings', [EarningsController::class, 'index'])->name('earnings.index');
+    Route::post('/earnings/account', [EarningsController::class, 'storeAccount'])->name('earnings.account.store');
+    Route::put('/earnings/account', [EarningsController::class, 'updateAccount'])->name('earnings.account.update');
+    Route::post('/earnings/withdrawal', [EarningsController::class, 'requestWithdrawal'])->name('earnings.withdrawal.store');
 
     // AI
     Route::get('/ai/suggestions', [AIController::class, 'suggestions'])->name('ai.suggestions');

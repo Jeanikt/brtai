@@ -72,7 +72,7 @@ class SettingsController extends Controller
                 'event_id' => null,
                 'amount' => 49.00,
                 'status' => 'pending',
-                'gateway' => 'abacate_pay',
+                'gateway' => 'woovi',
                 'gateway_transaction_id' => $pixData['transaction_id'],
                 'metadata' => [
                     'type' => 'plan_upgrade',

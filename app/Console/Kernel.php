@@ -15,7 +15,8 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\TestDiscordLog::class,
         \App\Console\Commands\MonitorActiveSessions::class,
         \App\Console\Commands\DailyDiscordReport::class,
-        \App\Console\Commands\WeeklyGrowthReport::class, // ✅ novo comando semanal
+        \App\Console\Commands\WeeklyGrowthReport::class,
+        \App\Console\Commands\TestWooviConnection::class,
     ];
 
     /**

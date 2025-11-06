@@ -10,13 +10,13 @@
 ### 🆓 Plano FREE
 - **Mensalidade:** Grátis
 - **Limite de convidados:** 70 por evento
-- **Taxa de transação:** 6.5% + R$0,80 por ingresso
+- **Taxa de transação:** 6.5% + R$0,85 por ingresso
 - **Eventos simultâneos:** 1 ativo
 
 ### 💎 Plano PRO
 - **Mensalidade:** R$19,00/mês
 - **Limite de convidados:** Ilimitado
-- **Taxa de transação:** 5.5% + R$0,80 por ingresso
+- **Taxa de transação:** 5.5% + R$0,85 por ingresso
 - **Eventos simultâneos:** Ilimitados
 
 ---
@@ -28,7 +28,7 @@
 #### 📊 PLANO FREE (máximo 70 convidados)
 ```
 Total Bruto: 70 × R$30 = R$2.100,00
-Taxa/ingresso: (6.5% × R$30) + R$0,80 = R$2,75
+Taxa/ingresso: (6.5% × R$30) + R$0,85 = R$2,75
 
 ✅ BROTAAI RECEBE: 70 × R$2,75 = R$192,50
 ✅ ORGANIZADOR RECEBE: R$2.100 - R$192,50 = R$1.907,50
@@ -39,7 +39,7 @@ Taxa/ingresso: (6.5% × R$30) + R$0,80 = R$2,75
 #### 📈 PLANO PRO (100 convidados)
 ```
 Total Bruto: 100 × R$30 = R$3.000,00
-Taxa/ingresso: (5.5% × R$30) + R$0,80 = R$2,45
+Taxa/ingresso: (5.5% × R$30) + R$0,85 = R$2,45
 
 ✅ BROTAAI RECEBE:
    - Taxas: 100 × R$2,45 = R$245,00
@@ -108,7 +108,7 @@ receita_brotaai = (quantidade_ingressos * taxa_transacao) + mensalidade_pro
 ```
 
 ### Fluxo Financeiro
-1. Cliente paga ingresso via Pix (AbacatePay)
+1. Cliente paga ingresso via Pix 
 2. Valor fica em conta intermediária
 3. BrotaAI retém taxas automaticamente
 4. Saldo é liberado para organizador (1-2 dias úteis)
