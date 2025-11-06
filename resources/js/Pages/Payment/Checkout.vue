@@ -48,7 +48,7 @@
             </div>
 
             <!-- PIX Payment Card -->
-            <div class="bg-white rounded-3xl shadow-sm p-6 mb-6">
+            <div v-if="pix_code" class="bg-white rounded-3xl shadow-sm p-6 mb-6">
                 <div class="text-center mb-6">
                     <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +63,8 @@
                 <!-- QR Code -->
                 <div class="flex justify-center mb-6">
                     <div class="bg-white p-4 rounded-2xl border-2 border-gray-200">
-                        <img v-if="pix_qr_code" :src="pix_qr_code" alt="QR Code PIX" class="w-48 h-48">
+                        <img v-if="pix_qr_code" :src="pix_qr_code" alt="QR Code PIX" class="w-48 h-48 object-contain"
+                            @error="handleImageError">
                         <div v-else class="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
                             <span class="text-gray-400">Carregando QR Code...</span>
                         </div>
@@ -75,7 +76,8 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Código PIX Copia e Cola:</label>
                     <div class="flex gap-2">
                         <input :value="pix_code" type="text" readonly
-                            class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl text-sm font-mono">
+                            class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl text-sm font-mono"
+                            id="pix-code-input">
                         <button @click="copyPixCode"
                             class="px-4 py-3 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200 transition-colors">
                             {{ copyButtonText }}
@@ -108,8 +110,22 @@
                 </div>
             </div>
 
+            <!-- Loading State -->
+            <div v-else class="bg-white rounded-3xl shadow-sm p-6 mb-6">
+                <div class="text-center py-8">
+                    <div class="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Gerando pagamento PIX...</h3>
+                    <p class="text-gray-600">Aguarde enquanto preparamos seu pagamento.</p>
+                </div>
+            </div>
+
             <!-- Action Buttons -->
-            <div class="space-y-3">
+            <div class="space-y-3" v-if="pix_code">
                 <button @click="checkPaymentStatus" :disabled="isChecking"
                     class="w-full bg-black text-white py-4 rounded-2xl font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,16 +154,24 @@ const props = defineProps({
     },
     pix_code: {
         type: String,
-        required: true
+        default: null
     },
     pix_qr_code: {
         type: String,
-        required: true
+        default: null
     },
     pix_expires_at: {
         type: String,
-        required: true
+        default: null
     }
+})
+
+// DEBUG: Log dos props recebidos
+console.log('Checkout component mounted with props:', {
+    participant: props.participant,
+    pix_code: props.pix_code ? `Present (${props.pix_code.length} chars)` : 'Missing',
+    pix_qr_code: props.pix_qr_code ? 'Present' : 'Missing',
+    pix_expires_at: props.pix_expires_at
 })
 
 const copyButtonText = ref('Copiar')
@@ -181,6 +205,12 @@ const formatTime = (seconds) => {
 
 const copyPixCode = async () => {
     try {
+        const pixCodeInput = document.getElementById('pix-code-input')
+        if (pixCodeInput) {
+            pixCodeInput.select()
+            pixCodeInput.setSelectionRange(0, 99999) // Para mobile
+        }
+
         await navigator.clipboard.writeText(props.pix_code)
         copyButtonText.value = 'Copiado!'
         setTimeout(() => {
@@ -188,7 +218,23 @@ const copyPixCode = async () => {
         }, 2000)
     } catch (err) {
         console.error('Falha ao copiar texto: ', err)
+        // Fallback para navegadores mais antigos
+        const pixCodeInput = document.getElementById('pix-code-input')
+        if (pixCodeInput) {
+            pixCodeInput.select()
+            document.execCommand('copy')
+            copyButtonText.value = 'Copiado!'
+            setTimeout(() => {
+                copyButtonText.value = 'Copiar'
+            }, 2000)
+        }
     }
+}
+
+const handleImageError = (event) => {
+    console.error('Erro ao carregar imagem do QR Code:', event)
+    event.target.style.display = 'none'
+    event.target.parentElement.innerHTML = '<div class="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-400">Erro ao carregar QR Code</span></div>'
 }
 
 const checkPaymentStatus = async () => {
@@ -203,6 +249,7 @@ const checkPaymentStatus = async () => {
             alert('Pagamento ainda não confirmado. Tente novamente em alguns instantes.')
         }
     } catch (error) {
+        console.error('Erro ao verificar status:', error)
         alert('Erro ao verificar status do pagamento.')
     } finally {
         isChecking.value = false
@@ -210,6 +257,11 @@ const checkPaymentStatus = async () => {
 }
 
 const updateTimer = () => {
+    if (!props.pix_expires_at) {
+        remainingTime.value = 0
+        return
+    }
+
     const expiresAt = new Date(props.pix_expires_at)
     const now = new Date()
     const diff = Math.floor((expiresAt - now) / 1000)
@@ -222,8 +274,10 @@ const updateTimer = () => {
     }
 }
 
-// Verificação automática do status
+// Verificação automática do status (apenas se tiver PIX)
 const startStatusCheck = () => {
+    if (!props.pix_code) return
+
     statusCheckInterval.value = setInterval(async () => {
         try {
             const response = await fetch(route('payment.status', props.participant.id))
@@ -236,7 +290,7 @@ const startStatusCheck = () => {
         } catch (error) {
             console.error('Erro na verificação automática:', error)
         }
-    }, 5000) // Verificar a cada 5 segundos
+    }, 10000) // Verificar a cada 10 segundos (reduzido de 5 para 10)
 }
 
 const goBack = () => {
@@ -244,9 +298,13 @@ const goBack = () => {
 }
 
 onMounted(() => {
-    updateTimer()
-    checkInterval.value = setInterval(updateTimer, 1000)
-    startStatusCheck()
+    console.log('Checkout component mounted')
+
+    if (props.pix_expires_at) {
+        updateTimer()
+        checkInterval.value = setInterval(updateTimer, 1000)
+        startStatusCheck()
+    }
 })
 
 onUnmounted(() => {

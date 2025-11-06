@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\DailyDiscordReport::class,
         \App\Console\Commands\WeeklyGrowthReport::class,
         \App\Console\Commands\TestWooviConnection::class,
+        \App\Console\Commands\TestWooviCharge::class,
     ];
 
     /**

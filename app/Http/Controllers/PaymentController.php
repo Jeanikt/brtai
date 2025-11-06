@@ -185,8 +185,6 @@ class PaymentController extends Controller
         $priceTier = $participant->priceTier;
 
         $value = $event->is_free ? 0 : $priceTier->price;
-
-        // Converter para centavos (Woovi espera valores inteiros em centavos)
         $valueInCents = (int) ($value * 100);
 
         $chargeData = [
@@ -240,17 +238,32 @@ class PaymentController extends Controller
 
         $charge = $result['data']['charge'];
 
+        // DEBUG: Log completo da resposta
         Log::info('PIX payment created successfully via Woovi', [
             'participant_id' => $participant->id,
             'correlation_id' => $charge['correlationID'],
-            'brcode' => isset($charge['brCode']) ? 'present' : 'missing',
-            'pixKey' => isset($charge['pixKey']) ? 'present' : 'missing',
-            'qrCodeImage' => isset($charge['qrCodeImage']) ? 'present' : 'missing'
+            'charge_keys' => array_keys($charge),
+            'brcode_present' => isset($charge['brCode']),
+            'qrCodeImage_present' => isset($charge['qrCodeImage']),
+            'paymentLinkUrl_present' => isset($charge['paymentLinkUrl']),
+            'full_charge' => $charge // Cuidado: não logar em produção
         ]);
 
+        // Verificar se temos os campos necessários
+        if (!isset($charge['brCode'])) {
+            Log::error('Missing brCode in Woovi response', [
+                'participant_id' => $participant->id,
+                'charge' => $charge
+            ]);
+            throw new \Exception('Resposta da Woovi não contém código PIX.');
+        }
+
+        // Usar qrCodeImage da resposta ou gerar URL alternativa
+        $qrCodeImage = $charge['qrCodeImage'] ?? $this->wooviService->generateQrCodeImageUrl($charge['correlationID']);
+
         return [
-            'pix_code' => $charge['brCode'] ?? $charge['pixKey'],
-            'qr_code_image' => $charge['qrCodeImage'] ?? $this->wooviService->generateQrCodeImageUrl($charge['correlationID']),
+            'pix_code' => $charge['brCode'],
+            'qr_code_image' => $qrCodeImage,
             'expires_at' => now()->addMinutes(30),
             'transaction_id' => $charge['correlationID'],
         ];

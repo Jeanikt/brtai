@@ -44,35 +44,46 @@ class WooviService
             'correlationID' => $data['correlation_id'],
             'value' => $data['value'],
             'comment' => $data['comment'],
-            'additionalInfo' => $data['additional_info'] ?? [],
+            'type' => 'DYNAMIC', // Campo OBRIGATÓRIO
+            'expiresIn' => 1800, // 30 minutos em segundos
         ];
 
+        // Adicionar customer se existir
         if (isset($data['customer'])) {
             $payload['customer'] = $data['customer'];
+        }
+
+        // Adicionar additionalInfo se existir
+        if (isset($data['additional_info']) && !empty($data['additional_info'])) {
+            $payload['additionalInfo'] = $data['additional_info'];
         }
 
         Log::info('Creating Woovi charge', [
             'correlation_id' => $data['correlation_id'],
             'value' => $data['value'],
-            'endpoint' => '/api/v1/charge'
+            'endpoint' => '/api/v1/charge',
+            'payload' => $payload
         ]);
 
         try {
-            $response = $this->client->post('/api/v1/charge', [
+            // Adicionar return_existing=true para idempotência
+            $response = $this->client->post('/api/v1/charge?return_existing=true', [
                 'json' => $payload
             ]);
 
             $body = $response->getBody()->getContents();
             $statusCode = $response->getStatusCode();
 
+            $responseData = json_decode($body, true);
+
             Log::info('Woovi API Response', [
                 'status' => $statusCode,
-                'body' => $body
+                'body' => $responseData
             ]);
 
             return [
                 'success' => true,
-                'data' => json_decode($body, true)
+                'data' => $responseData
             ];
         } catch (RequestException $e) {
             $response = $e->getResponse();
@@ -82,7 +93,7 @@ class WooviService
             Log::error('Woovi API Error', [
                 'status' => $statusCode,
                 'error' => $errorBody,
-                'app_id' => $this->appId ? '***' . substr($this->appId, -4) : 'NULL'
+                'payload' => $payload
             ]);
 
             $errorData = json_decode($errorBody, true) ?? ['errors' => [['message' => $e->getMessage()]]];
