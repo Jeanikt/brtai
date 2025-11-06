@@ -163,12 +163,6 @@ class PaymentController extends Controller
     {
         $participant = Participant::findOrFail($participantId);
 
-        Log::info('Checking payment status for participant', [
-            'participant_id' => $participantId,
-            'transaction_id' => $participant->transaction_id,
-            'current_status' => $participant->payment_status
-        ]);
-
         if (!$participant->transaction_id) {
             Log::warning('No transaction ID found for participant', ['participant_id' => $participantId]);
             return response()->json(['paid' => false]);
