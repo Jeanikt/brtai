@@ -26,6 +26,7 @@ class Participant extends Model
         'transaction_id',
         'pix_code',
         'pix_expires_at',
+        'pix_qr_code',
         'confirmed_at',
         'checked_in_at',
         'metadata',
@@ -126,7 +127,15 @@ class Participant extends Model
 
     public function isPixExpired()
     {
-        return $this->pix_expires_at && $this->pix_expires_at->isPast();
+        if (!$this->pix_expires_at) {
+            return true;
+        }
+        return now()->greaterThan($this->pix_expires_at);
+    }
+
+    public function hasActivePix()
+    {
+        return !empty($this->pix_code) && !$this->isPixExpired();
     }
 
     /** 💰 Accessors **/

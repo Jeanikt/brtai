@@ -26,6 +26,14 @@ class PaymentController extends Controller
             return redirect()->route('payment.success', $participant->id);
         }
 
+        // DEBUG: Log do estado atual
+        Log::info('PaymentController::checkout - Participant state', [
+            'participant_id' => $participant->id,
+            'pix_code_exists' => !empty($participant->pix_code),
+            'pix_expired' => $participant->isPixExpired(),
+            'payment_status' => $participant->payment_status
+        ]);
+
         // Gerar ou reutilizar PIX
         if (!$participant->pix_code || $participant->isPixExpired()) {
             try {
@@ -38,6 +46,14 @@ class PaymentController extends Controller
 
                 $pixData = $this->generatePixPayment($participant);
 
+                // DEBUG: Log dos dados do PIX gerados
+                Log::info('PIX data generated', [
+                    'participant_id' => $participant->id,
+                    'pix_code_length' => strlen($pixData['pix_code']),
+                    'qr_code_image' => $pixData['qr_code_image'],
+                    'transaction_id' => $pixData['transaction_id']
+                ]);
+
                 $participant->update([
                     'pix_code' => $pixData['pix_code'],
                     'pix_expires_at' => $pixData['expires_at'],
@@ -46,10 +62,15 @@ class PaymentController extends Controller
                     'payment_amount' => $participant->priceTier->price,
                 ]);
 
+                // Recarregar o participant com os dados atualizados
+                $participant->refresh();
+
                 Log::info('PIX payment generated successfully', [
                     'participant_id' => $participant->id,
                     'transaction_id' => $pixData['transaction_id'],
-                    'expires_at' => $pixData['expires_at']
+                    'expires_at' => $pixData['expires_at'],
+                    'pix_code_saved' => !empty($participant->pix_code),
+                    'qr_code_saved' => !empty($participant->pix_qr_code)
                 ]);
             } catch (\Exception $e) {
                 Log::error('Erro ao gerar PIX: ' . $e->getMessage(), [
@@ -62,9 +83,19 @@ class PaymentController extends Controller
         } else {
             Log::info('Reusing existing PIX payment', [
                 'participant_id' => $participant->id,
-                'transaction_id' => $participant->transaction_id
+                'transaction_id' => $participant->transaction_id,
+                'pix_code' => $participant->pix_code ? 'present' : 'missing',
+                'qr_code' => $participant->pix_qr_code ? 'present' : 'missing'
             ]);
         }
+
+        // DEBUG: Log dos dados que serão enviados para o frontend
+        Log::info('Sending data to frontend', [
+            'participant_id' => $participant->id,
+            'pix_code' => $participant->pix_code ? 'present' : 'missing',
+            'pix_qr_code' => $participant->pix_qr_code ? 'present' : 'missing',
+            'pix_expires_at' => $participant->pix_expires_at
+        ]);
 
         return Inertia::render('Payment/Checkout', [
             'participant' => $participant->load('event.organizer'),
@@ -246,7 +277,7 @@ class PaymentController extends Controller
             'brcode_present' => isset($charge['brCode']),
             'qrCodeImage_present' => isset($charge['qrCodeImage']),
             'paymentLinkUrl_present' => isset($charge['paymentLinkUrl']),
-            'full_charge' => $charge // Cuidado: não logar em produção
+            // 'full_charge' => $charge // Descomente apenas para debug
         ]);
 
         // Verificar se temos os campos necessários
@@ -272,21 +303,30 @@ class PaymentController extends Controller
     private function createPaymentTransaction(Participant $participant, array $chargeData)
     {
         $organizer = $participant->event->organizer;
+
+        // 🔹 Percentual de taxa por plano
         $feePercentage = $organizer->isPro() ? 0.055 : 0.065;
-        $fixedFee = 0.80;
+        $fixedFee = 0.85; // ✅ Corrigido de 0.80 para 0.85
+
+        // 🔹 Valor total do pagamento (ou preço do tier)
         $paymentAmount = $participant->payment_amount ?? $participant->priceTier->price;
 
+        // 🔹 Cálculo da taxa e do ganho líquido
         $feeAmount = ($paymentAmount * $feePercentage) + $fixedFee;
-        $netAmount = $paymentAmount - $feeAmount;
+        $netAmount = max(0, $paymentAmount - $feeAmount);
 
-        Log::info('Creating payment transaction', [
+        // 🔹 Log detalhado
+        Log::info('💰 Calculando transação de pagamento', [
             'participant_id' => $participant->id,
+            'organizer_plan' => $organizer->plan_type,
             'payment_amount' => $paymentAmount,
-            'fee_amount' => $feeAmount,
+            'fee_percentage' => $feePercentage,
+            'fixed_fee' => $fixedFee,
+            'fee_amount_total' => $feeAmount,
             'net_amount' => $netAmount,
-            'organizer_plan' => $organizer->plan_type
         ]);
 
+        // 🔹 Registro no banco
         return PaymentTransaction::create([
             'participant_id' => $participant->id,
             'event_id' => $participant->event_id,
