@@ -6,7 +6,6 @@ use App\Models\WebhookLog;
 use App\Models\Subscription;
 use App\Models\PaymentTransaction;
 use App\Models\Participant;
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -30,13 +29,10 @@ class ProcessWooviWebhook implements ShouldQueue
         $payload = $this->webhookLog->payload;
         $event = $payload['event'] ?? null;
 
-        Log::info('Processing Woovi webhook event: ' . $event, ['webhook_id' => $this->webhookLog->id]);
-
         if ($event === 'OPENPIX:CHARGE_COMPLETED') {
             $this->handleChargeCompleted($payload);
         }
 
-        // Atualizar o webhook log como processado
         $this->webhookLog->update([
             'processed_at' => now(),
             'status_code' => 200,
@@ -51,7 +47,6 @@ class ProcessWooviWebhook implements ShouldQueue
         $status = $charge['status'] ?? null;
 
         if ($status === 'COMPLETED' && $correlationID) {
-            // Verificar se é uma assinatura
             if (str_starts_with($correlationID, 'subscription_')) {
                 $this->handleSubscriptionPayment($charge);
             } else {
@@ -77,13 +72,7 @@ class ProcessWooviWebhook implements ShouldQueue
                 ])
             ]);
 
-            // Atualizar plano do usuário
             $subscription->user->profile->update(['plan_type' => 'pro']);
-
-            Log::info('Subscription activated via webhook', [
-                'subscription_id' => $subscription->id,
-                'user_id' => $subscription->user_id
-            ]);
         }
     }
 
@@ -91,24 +80,20 @@ class ProcessWooviWebhook implements ShouldQueue
     {
         $correlationID = $charge['correlationID'];
 
-        // Extrair participant_id do correlationID (formato: participant_{id}_{timestamp})
         if (preg_match('/participant_([^_]+)_/', $correlationID, $matches)) {
             $participantId = $matches[1];
-
             $participant = Participant::find($participantId);
 
             if ($participant && $participant->payment_status !== 'paid') {
                 $participant->markAsPaid();
 
-                // Calcular taxas
                 $organizer = $participant->event->organizer;
-                $feePercentage = $organizer->plan_type === 'pro' ? 0.055 : 0.065;
-                $fixedFee = 0.85;
+                $event = $participant->event;
                 $paymentAmount = $participant->payment_amount ?? $participant->priceTier->price;
-                $feeAmount = ($paymentAmount * $feePercentage) + $fixedFee;
+
+                $feeAmount = $event->calculateFee($paymentAmount, 'pix', $organizer->plan_type);
                 $netAmount = max(0, $paymentAmount - $feeAmount);
 
-                // Registrar transação de pagamento
                 PaymentTransaction::create([
                     'participant_id' => $participant->id,
                     'event_id' => $participant->event_id,
@@ -120,11 +105,6 @@ class ProcessWooviWebhook implements ShouldQueue
                     'fee_amount' => $feeAmount,
                     'net_amount' => $netAmount,
                     'processed_at' => now(),
-                ]);
-
-                Log::info('Participant payment completed via webhook', [
-                    'participant_id' => $participant->id,
-                    'event_id' => $participant->event_id
                 ]);
             }
         }

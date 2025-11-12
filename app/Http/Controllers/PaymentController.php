@@ -298,11 +298,16 @@ class PaymentController extends Controller
     {
         $organizer = $participant->event->organizer;
 
-        // 🔹 Percentual de taxa por plano
-        $feePercentage = $organizer->isPro() ? 0.055 : 0.065;
-        $fixedFee = 0.85; // ✅ Corrigido de 0.80 para 0.85
+        // ✅ APLICANDO NOVAS REGRAS: Taxas por plano
+        if ($organizer->plan_type === 'pro') {
+            $feePercentage = 0.055; // 5.5% para Pro
+            $fixedFee = 0.85; // R$ 0,85 fixo para PIX
+        } else {
+            $feePercentage = 0.065; // 6.5% para Free
+            $fixedFee = 0.85; // R$ 0,85 fixo para PIX
+        }
 
-        // 🔹 Valor total do pagamento (ou preço do tier)
+        // 🔹 Valor total do pagamento
         $paymentAmount = $participant->payment_amount ?? $participant->priceTier->price;
 
         // 🔹 Cálculo da taxa e do ganho líquido
@@ -310,7 +315,7 @@ class PaymentController extends Controller
         $netAmount = max(0, $paymentAmount - $feeAmount);
 
         // 🔹 Log detalhado
-        Log::info('💰 Calculando transação de pagamento', [
+        Log::info('💰 Calculando transação com NOVAS REGRAS', [
             'participant_id' => $participant->id,
             'organizer_plan' => $organizer->plan_type,
             'payment_amount' => $paymentAmount,
@@ -333,5 +338,4 @@ class PaymentController extends Controller
             'net_amount' => $netAmount,
             'processed_at' => now(),
         ]);
-    }
-}
+    }}

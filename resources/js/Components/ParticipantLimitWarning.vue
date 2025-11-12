@@ -40,7 +40,7 @@
 
                 <Link :href="route('settings.billing')"
                     class="block w-full bg-black text-yellow-400 py-2.5 px-4 rounded-full font-bold text-sm text-center hover:bg-gray-800 transition-colors">
-                Upgrade para Pro - R$ 19/mês
+                Upgrade para Pro - R$ 9/mês
                 </Link>
             </div>
         </div>

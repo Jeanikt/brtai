@@ -1,4 +1,3 @@
-<!-- resources/js/Pages/Payment/PlanUpgrade.vue -->
 <template>
     <div class="min-h-screen bg-gray-50 py-8">
         <div class="max-w-md mx-auto px-4">
@@ -49,15 +48,7 @@
                                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                 clip-rule="evenodd" />
                         </svg>
-                        Taxa reduzida (5.5% + R$0,80)
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        Analytics avançados
+                        Taxa reduzida (5.5% + R$0,85)
                     </li>
                 </ul>
             </div>
@@ -76,10 +67,12 @@
                 </div>
 
                 <!-- QR Code -->
-                <div class="bg-gray-50 rounded-2xl p-4 mb-4">
-                    <div class="aspect-square max-w-xs mx-auto">
-                        <img v-if="qrCodeUrl" :src="qrCodeUrl" alt="QR Code PIX" class="w-full h-full object-contain">
-                        <div v-else class="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                <div class="flex justify-center mb-6">
+                    <div class="bg-white p-4 rounded-2xl border-2 border-gray-200">
+                        <!-- ✅ CORREÇÃO: Usar pix_qr_code em vez de gerar URL -->
+                        <img v-if="pix_qr_code" :src="pix_qr_code" alt="QR Code PIX" class="w-48 h-48 object-contain"
+                            @error="handleImageError">
+                        <div v-else class="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
                             <span class="text-gray-400">Carregando QR Code...</span>
                         </div>
                     </div>
@@ -90,7 +83,8 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Código PIX (Copie e Cole)</label>
                     <div class="flex gap-2">
                         <input :value="pix_code" type="text" readonly
-                            class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl text-sm font-mono">
+                            class="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl text-sm font-mono"
+                            id="pix-code-input">
                         <button @click="copyPixCode"
                             class="px-4 py-3 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200 transition-colors">
                             {{ copyButtonText }}
@@ -127,9 +121,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 
+// ✅ CORREÇÃO: Adicionar pix_qr_code nas props
 const props = defineProps({
-    transaction: Object,
+    subscription: Object,
     pix_code: String,
+    pix_qr_code: String, // ✅ ADICIONADO
     pix_expires_at: String,
     plan_type: String,
     amount: Number
@@ -141,11 +137,11 @@ const remainingTime = ref(0)
 const checkInterval = ref(null)
 const statusCheckInterval = ref(null)
 
-// Gerar QR Code
-const qrCodeUrl = computed(() => {
-    if (!props.pix_code) return null
-    return `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(props.pix_code)}`
-})
+// ✅ REMOVIDO: Não gerar QR Code, usar o fornecido pela API
+// const qrCodeUrl = computed(() => {
+//     if (!props.pix_code) return null
+//     return `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(props.pix_code)}`
+// })
 
 const timerPercentage = computed(() => {
     const totalTime = 30 * 60 // 30 minutos em segundos
@@ -170,10 +166,15 @@ const copyPixCode = async () => {
     }
 }
 
+const handleImageError = (event) => {
+    console.error('Erro ao carregar QR Code:', event)
+    event.target.style.display = 'none'
+}
+
 const checkPaymentStatus = async () => {
     isChecking.value = true
     try {
-        const response = await fetch(route('settings.check-upgrade-status', props.transaction.gateway_transaction_id))
+        const response = await fetch(route('settings.check-upgrade-status', props.subscription.id))
         const data = await response.json()
 
         if (data.paid) {
@@ -189,6 +190,11 @@ const checkPaymentStatus = async () => {
 }
 
 const updateTimer = () => {
+    if (!props.pix_expires_at) {
+        remainingTime.value = 0
+        return
+    }
+
     const expiresAt = new Date(props.pix_expires_at)
     const now = new Date()
     const diff = Math.floor((expiresAt - now) / 1000)
@@ -205,7 +211,7 @@ const updateTimer = () => {
 const startStatusCheck = () => {
     statusCheckInterval.value = setInterval(async () => {
         try {
-            const response = await fetch(route('settings.check-upgrade-status', props.transaction.gateway_transaction_id))
+            const response = await fetch(route('settings.check-upgrade-status', props.subscription.id))
             const data = await response.json()
 
             if (data.paid) {
@@ -215,10 +221,16 @@ const startStatusCheck = () => {
         } catch (error) {
             console.error('Erro na verificação automática:', error)
         }
-    }, 5000)
+    }, 10000) // Verificar a cada 10 segundos
 }
 
 onMounted(() => {
+    console.log('PlanUpgrade mounted with props:', {
+        pix_code: props.pix_code,
+        pix_qr_code: props.pix_qr_code,
+        pix_expires_at: props.pix_expires_at
+    })
+
     updateTimer()
     checkInterval.value = setInterval(updateTimer, 1000)
     startStatusCheck()

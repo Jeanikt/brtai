@@ -31,6 +31,15 @@
                             </svg>
                             Até 70 participantes
                         </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="w-5 h-5 text-green-600 mr-2 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Taxa: 6.5% + R$0,85
+                        </li>
                     </ul>
                     <button v-if="user_plan === 'freemium'" disabled
                         class="w-full bg-gray-100 text-gray-400 py-3 px-4 rounded-2xl font-semibold cursor-not-allowed">
@@ -45,7 +54,7 @@
                             class="bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-full">Recomendado</span>
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-2">Pro</h3>
-                    <p class="text-3xl font-bold text-gray-900 mb-4">R$ 49<span
+                    <p class="text-3xl font-bold text-gray-900 mb-4">R$ 9<span
                             class="text-sm font-normal text-gray-600">/mês</span></p>
                     <ul class="space-y-3 mb-6">
                         <li class="flex items-center text-sm text-gray-600">
@@ -55,7 +64,7 @@
                                     d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                     clip-rule="evenodd" />
                             </svg>
-                            Até 10 eventos ativos
+                            Eventos ilimitados
                         </li>
                         <li class="flex items-center text-sm text-gray-600">
                             <svg class="w-5 h-5 text-green-600 mr-2 flex-shrink-0" fill="currentColor"
@@ -64,7 +73,7 @@
                                     d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                     clip-rule="evenodd" />
                             </svg>
-                            Até 500 participantes
+                            Participantes ilimitados
                         </li>
                         <li class="flex items-center text-sm text-gray-600">
                             <svg class="w-5 h-5 text-green-600 mr-2 flex-shrink-0" fill="currentColor"
@@ -73,7 +82,7 @@
                                     d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                     clip-rule="evenodd" />
                             </svg>
-                            Analytics avançados
+                            Taxa reduzida: 5.5% + R$0,85
                         </li>
                     </ul>
                     <Link v-if="user_plan === 'freemium'" :href="route('settings.upgrade-pro')" method="post"

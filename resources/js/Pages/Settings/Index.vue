@@ -120,7 +120,7 @@
                             </ul>
                             <Link :href="route('settings.upgrade-pro')" method="post" as="button"
                                 class="w-full bg-black text-white py-3 rounded-2xl font-semibold hover:bg-gray-800 transition-colors text-center">
-                            Fazer Upgrade para Pro - R$ 19/mês
+                            Fazer Upgrade para Pro - R$ 9/mês
                             </Link>
                         </div>
 

@@ -53,12 +53,11 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->count();
 
-        // Calcular se pode criar evento baseado no plano
         $canCreateEvent = $this->canCreateEvent($profile->plan_type, $profile->id, $activeEventsCount);
 
         return Inertia::render('Dashboard/Index', [
             'events' => $events,
-            'user_plan' => $profile->plan_type, // Agora passando user_plan diretamente
+            'user_plan' => $profile->plan_type,
             'active_events_count' => $activeEventsCount,
             'can_create_event' => $canCreateEvent,
             'filters' => $request->only(['filter'])
@@ -71,7 +70,7 @@ class DashboardController extends Controller
             return $activeEventsCount < 1;
         }
 
-        return true; // Pro e Enterprise podem criar eventos ilimitados
+        return true;
     }
 
     public function analytics(Request $request)

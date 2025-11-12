@@ -408,7 +408,7 @@ class EventController extends Controller
     {
         $messages = [
             'freemium' => 'Plano Free permite apenas 1 evento ativo por vez. Faça upgrade para criar mais eventos.',
-            'pro' => 'Plano Pro permite até 10 eventos ativos simultaneamente.',
+            'pro' => 'Plano Pro permite eventos ilimitados.',
             'enterprise' => 'Plano Enterprise permite eventos ilimitados.',
         ];
 
@@ -419,7 +419,7 @@ class EventController extends Controller
     {
         $planLimits = [
             'freemium' => 70,
-            'pro' => 500,
+            'pro' => null,
             'enterprise' => null,
         ];
 
@@ -429,7 +429,11 @@ class EventController extends Controller
             return $planLimit;
         }
 
-        return min($requestedMax, $planLimit);
+        if ($planLimit !== null) {
+            return min($requestedMax, $planLimit);
+        }
+
+        return $requestedMax;
     }
 
     private function createPriceTiers(Event $event, array $validated)
@@ -449,12 +453,6 @@ class EventController extends Controller
     {
         try {
             $profile = $this->getCurrentProfile();
-
-            Log::info('Testando configuração do storage', [
-                'disk' => config('filesystems.default'),
-                'supabase_url' => config('filesystems.disks.supabase.url'),
-                'bucket' => config('filesystems.disks.supabase.bucket')
-            ]);
 
             $testFile = $request->file('test_image');
             if ($testFile) {

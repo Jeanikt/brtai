@@ -81,7 +81,7 @@
 
             <Link :href="route('settings.billing')"
                 class="block w-full bg-black text-yellow-400 py-3 px-6 rounded-full font-bold text-center hover:bg-gray-800 transition-colors">
-            Fazer Upgrade por R$ 19/mês
+            Fazer Upgrade por R$ 9/mês
             </Link>
         </div>
     </div>

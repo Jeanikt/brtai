@@ -119,7 +119,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings/billing', [SettingsController::class, 'billing'])->name('settings.billing');
     Route::post('/settings/upgrade-pro', [SettingsController::class, 'upgradeToPro'])->name('settings.upgrade-pro');
     Route::get('/settings/upgrade-success', [SettingsController::class, 'upgradeSuccess'])->name('settings.upgrade-success');
-    Route::get('/settings/upgrade-status/{transactionId}', [SettingsController::class, 'checkUpgradeStatus'])->name('settings.check-upgrade-status');
+    Route::get('/settings/upgrade-status/{subscriptionId}', [SettingsController::class, 'checkUpgradeStatus'])->name('settings.check-upgrade-status');
+    Route::post('/settings/cancel-subscription', [SettingsController::class, 'cancelSubscription'])->name('settings.cancel-subscription');
 });
 
 Route::middleware('auth')->group(function () {

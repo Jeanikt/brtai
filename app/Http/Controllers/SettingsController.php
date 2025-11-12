@@ -67,7 +67,7 @@ class SettingsController extends Controller
 
         return Inertia::render('Settings/Billing', [
             'user_plan' => $profile->plan_type,
-            'pro_price' => 19.00, // R$ 19/mês (conforme regra de negócio)
+            'pro_price' => 9.00,
             'subscription' => $activeSubscription,
         ]);
     }
@@ -85,13 +85,13 @@ class SettingsController extends Controller
         try {
             // Gerar assinatura PIX recorrente
             $subscriptionData = $this->createProSubscription($user, $profile);
-
             return Inertia::render('Payment/PlanUpgrade', [
                 'subscription' => $subscriptionData['subscription'],
                 'pix_code' => $subscriptionData['pix_code'],
+                'pix_qr_code' => $subscriptionData['qr_code_image'],
                 'pix_expires_at' => $subscriptionData['expires_at']->toISOString(),
                 'plan_type' => 'pro',
-                'amount' => 19.00
+                'amount' => 9.00
             ]);
         } catch (\Exception $e) {
             Log::error('Erro ao gerar assinatura Pro: ' . $e->getMessage());
@@ -104,7 +104,7 @@ class SettingsController extends Controller
         $user = $request->user();
         $profile = $user->profile;
 
-        return Inertia::render('Settings/UpgradeSuccess', [
+        return Inertia::render('Payment/UpgradeSuccess', [
             'plan_type' => $profile->plan_type,
             'user' => $user
         ]);
@@ -183,7 +183,7 @@ class SettingsController extends Controller
 
         $payload = [
             'correlationID' => 'subscription_' . $user->id . '_' . time(),
-            'value' => 1900, // R$ 19,00 em centavos (conforme regra de negócio)
+            'value' => 900, 
             'comment' => "Assinatura Plano Pro - BrotaAI (Mensal)",
             'type' => 'DYNAMIC',
             'expiresIn' => 1800, // 30 minutos
@@ -216,34 +216,51 @@ class SettingsController extends Controller
         if ($response->successful()) {
             $paymentData = $response->json();
 
+            Log::info('Woovi subscription response', [
+                'charge_data' => $paymentData['charge'] ?? [],
+                'brcode_present' => isset($paymentData['charge']['brCode']),
+                'qrCodeImage_present' => isset($paymentData['charge']['qrCodeImage']),
+            ]);
+
+            if (!isset($paymentData['charge']['brCode'])) {
+                Log::error('Missing brCode in Woovi subscription response', [
+                    'response' => $paymentData
+                ]);
+                throw new \Exception('Resposta da Woovi não contém código PIX.');
+            }
+            $qrCodeImage = $paymentData['charge']['qrCodeImage'] ?? null;
+
             // Criar registro de assinatura
             $subscription = Subscription::create([
                 'id' => \Illuminate\Support\Str::uuid(),
                 'user_id' => $user->id,
                 'plan_type' => 'pro',
                 'status' => 'pending',
-                'amount' => 19.00,
+                'amount' => 9.00,
                 'gateway' => 'woovi',
                 'gateway_transaction_id' => $paymentData['charge']['correlationID'],
                 'starts_at' => now(),
                 'ends_at' => now()->addMonth(),
                 'metadata' => [
                     'pix_code' => $paymentData['charge']['brCode'],
-                    'qr_code_image' => $paymentData['charge']['qrCodeImage'],
+                    'qr_code_image' => $qrCodeImage,
                     'expires_at' => now()->addMinutes(30)->toISOString()
                 ]
             ]);
 
             return [
                 'pix_code' => $paymentData['charge']['brCode'],
-                'qr_code_image' => $paymentData['charge']['qrCodeImage'],
+                'qr_code_image' => $qrCodeImage,
                 'expires_at' => now()->addMinutes(30),
                 'transaction_id' => $paymentData['charge']['correlationID'],
                 'subscription' => $subscription
             ];
         }
-
         $errorMessage = $response->body();
+        Log::error('Failed to create Woovi subscription', [
+            'status' => $response->status(),
+            'error' => $errorMessage
+        ]);
         throw new \Exception('Falha ao gerar assinatura PIX: ' . $errorMessage);
     }
 }
