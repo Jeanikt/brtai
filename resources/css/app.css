@@ -8,7 +8,6 @@
   font-family: "Prompt", sans-serif;
 }
 
-/* Melhorias mobile */
 @media (max-width: 640px) {
   .min-h-screen {
     min-height: 100vh;
@@ -16,14 +15,12 @@
   }
 }
 
-/* Transições suaves */
 * {
   transition-property: color, background-color, border-color, transform, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease-in-out;
 }
 
-/* Inputs */
 input {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -35,12 +32,53 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(0, 168, 89, 0.1);
 }
 
-/* Botões arredondados */
 .rounded-full {
   border-radius: 9999px;
 }
 
-/* Cards com cantos arredondados */
 [class*="rounded-[32px]"] {
   border-radius: 32px;
+}
+
+@media (max-width: 375px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  button,
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .events-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .events-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+p, span, div {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }

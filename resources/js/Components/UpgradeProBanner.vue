@@ -88,19 +88,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 
 const props = defineProps({
-    title: String,
-    description: String,
-    dismissible: {
-        type: Boolean,
-        default: false
-    },
-    showSavings: {
-        type: Boolean,
-        default: true
+    title: {
+        type: String,
+        default: 'Desbloqueie todo o potencial!'
     },
     estimatedParticipants: {
         type: Number,
@@ -109,22 +103,32 @@ const props = defineProps({
     ticketPrice: {
         type: Number,
         default: 30
+    },
+    showSavings: {
+        type: Boolean,
+        default: true
+    },
+    dismissible: {
+        type: Boolean,
+        default: false
     }
 })
 
-defineEmits(['dismiss'])
+const isDismissed = ref(false)
 
-const calculatedSavings = computed(() => {
-    const freeFee = (props.ticketPrice * 0.065) + 0.80
-    const proFee = (props.ticketPrice * 0.055) + 0.80
-    const savingsPerTicket = freeFee - proFee
-    return savingsPerTicket * props.estimatedParticipants
-})
-
-const formatPrice = (value) => {
-    return value.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    })
+const calculateLoss = () => {
+    const totalRevenue = props.estimatedParticipants * props.ticketPrice
+    const freePlanFee = totalRevenue * 0.10
+    const proPlanFee = totalRevenue * 0.055
+    return (freePlanFee - proPlanFee).toFixed(2)
 }
+
+const dismiss = () => {
+    if (props.dismissible) {
+        isDismissed.value = true
+        emit('dismiss')
+    }
+}
+
+const emit = defineEmits(['dismiss'])
 </script>
