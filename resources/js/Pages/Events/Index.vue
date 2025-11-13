@@ -1,39 +1,37 @@
 <template>
     <AuthenticatedLayout>
         <div class="space-y-6 max-w-4xl mx-auto px-4">
-            <!-- Header Compacto -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div class="space-y-1">
                     <h1 class="text-2xl font-bold text-gray-900">Meus Eventos</h1>
                     <p class="text-sm text-gray-600">{{ events.length }} evento{{ events.length !== 1 ? 's' : '' }}
                         criado{{ events.length !== 1 ? 's' : '' }}</p>
                 </div>
 
-                <!-- Criar Evento Button - Condicional baseado no plano -->
-                <Link v-if="can_create_event" :href="route('events.create')"
-                    class="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors text-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Criar Evento
-                </Link>
-
-                <!-- Botão desabilitado para free users no limite -->
-                <button v-else disabled
-                    class="flex items-center gap-2 bg-gray-300 text-gray-500 px-6 py-3 rounded-full font-semibold text-sm cursor-not-allowed">
+                <div class="flex gap-2">
+                    <Link v-if="can_create_event" :href="route('events.create')"
+                        class="flex items-center gap-2 bg-black text-white px-4 sm:px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors text-sm whitespace-nowrap justify-center sm:justify-start">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Limite Atingido
-                </button>
+                    <span class="hidden sm:inline">Criar Evento</span>
+                    <span class="sm:hidden">Criar</span>
+                    </Link>
+
+                    <button v-else disabled
+                        class="flex items-center gap-2 bg-gray-300 text-gray-500 px-4 sm:px-6 py-3 rounded-full font-semibold text-sm cursor-not-allowed whitespace-nowrap justify-center sm:justify-start">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span class="hidden sm:inline">Limite Atingido</span>
+                        <span class="sm:hidden">Limite</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Banner de Upgrade para Free Users -->
-            <UpgradeProBanner v-if="user_plan === 'freemium'" title="Desbloqueie todo o potencial!"
-                :estimated-participants="100" :ticket-price="30" :show-savings="true" :dismissible="true"
+            <UpgradeProBanner v-if="showUpgradeBanner && user_plan === 'freemium'" :dismissible="true"
                 @dismiss="dismissUpgradeBanner" />
 
-            <!-- Alerta de Limite para Free Users -->
             <div v-if="user_plan === 'freemium' && !can_create_event"
                 class="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-4">
                 <div class="flex items-center gap-3">
@@ -55,9 +53,7 @@
                 </div>
             </div>
 
-            <!-- Barra de Filtros Melhorada -->
             <div class="flex items-center gap-4 bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-                <!-- Busca -->
                 <div class="relative flex-1 max-w-md">
                     <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,10 +65,8 @@
                         class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-xl border-0 text-sm focus:ring-2 focus:ring-black focus:bg-white transition-all duration-200 placeholder-gray-500" />
                 </div>
 
-                <!-- Separador Visual -->
                 <div class="h-8 w-px bg-gray-300"></div>
 
-                <!-- Filtro de Status -->
                 <div class="relative">
                     <button @click="showFilterDropdown = !showFilterDropdown"
                         class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700 border border-transparent hover:border-gray-300 min-w-[120px] justify-between">
@@ -84,7 +78,6 @@
                         </svg>
                     </button>
 
-                    <!-- Dropdown de Filtros Melhorado -->
                     <div v-if="showFilterDropdown"
                         class="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-20 backdrop-blur-sm bg-white/95">
                         <div class="px-3 py-2 border-b border-gray-100">
@@ -107,7 +100,6 @@
                     </div>
                 </div>
 
-                <!-- Botão de Ordenação -->
                 <button
                     class="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,16 +110,11 @@
                 </button>
             </div>
 
-            <!-- Resto do código permanece igual -->
-            <!-- Grid de Eventos -->
             <div v-if="events.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Cards de Evento Existentes -->
                 <div v-for="event in events" :key="event.id"
                     class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    <!-- Imagem do Evento -->
                     <div class="h-32 bg-cover bg-center relative"
                         :style="event.header_image_url ? `background-image: url('${event.header_image_url}')` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)'">
-                        <!-- Badge de Status -->
                         <div class="absolute top-3 left-3">
                             <span :class="{
                                 'bg-green-500': event.status === 'active',
@@ -141,7 +128,6 @@
                             </span>
                         </div>
 
-                        <!-- Ações Rápidas -->
                         <div class="absolute top-3 right-3 flex gap-1">
                             <button @click="openShareModal(event)"
                                 class="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors backdrop-blur-sm">
@@ -161,9 +147,7 @@
                         </div>
                     </div>
 
-                    <!-- Conteúdo do Card -->
                     <div class="p-4 space-y-3">
-                        <!-- Título e Data -->
                         <div>
                             <h3 class="font-semibold text-gray-900 text-sm line-clamp-2 mb-1">
                                 {{ event.name }}
@@ -173,7 +157,6 @@
                             </p>
                         </div>
 
-                        <!-- Local e Preço -->
                         <div class="space-y-1">
                             <div class="flex items-center gap-1 text-xs text-gray-600">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,13 +170,12 @@
                             <div class="flex items-center gap-1 text-xs text-gray-600">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8c1.11 0 2.08.402 2.599 1M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <span>R$ {{ formatPrice(event.price) }}</span>
                             </div>
                         </div>
 
-                        <!-- Estatísticas -->
                         <div class="flex items-center justify-between text-xs">
                             <span class="text-gray-500">
                                 {{ event.confirmed_count || 0 }} confirmados
@@ -207,7 +189,6 @@
                             </span>
                         </div>
 
-                        <!-- Botões de Ação -->
                         <div class="flex gap-2 pt-2">
                             <Link :href="route('events.show', event.id)"
                                 class="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors text-center">
@@ -221,7 +202,6 @@
                     </div>
                 </div>
 
-                <!-- Card para Criar Novo Evento (apenas se permitido) -->
                 <div v-if="can_create_event" @click="route.visit(route('events.create'))"
                     class="border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center p-6 hover:border-gray-400 hover:bg-gray-50 transition-colors cursor-pointer min-h-[200px]">
                     <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
@@ -233,7 +213,6 @@
                 </div>
             </div>
 
-            <!-- Estado Vazio -->
             <div v-else class="text-center py-12 bg-white rounded-2xl border border-gray-200">
                 <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span class="text-2xl">🎪</span>
@@ -250,7 +229,6 @@
                 Criar Primeiro Evento
                 </Link>
 
-                <!-- Mensagem para free users no limite -->
                 <div v-else class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 max-w-sm mx-auto">
                     <p class="text-sm text-yellow-800">
                         Você atingiu o limite do plano Free.
@@ -262,9 +240,7 @@
             </div>
         </div>
 
-        <!-- Modais (mantidos do código original) -->
         <Teleport to="body">
-            <!-- Modal de Exclusão -->
             <div v-if="showDeleteModal"
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
                 @click.self="showDeleteModal = false">
@@ -284,7 +260,6 @@
                 </div>
             </div>
 
-            <!-- Modal de Compartilhamento -->
             <div v-if="showShareModal"
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
                 @click.self="showShareModal = false">
@@ -449,9 +424,9 @@ function copyEventLink() {
     })
 }
 
-function dismissUpgradeBanner() {
-    localStorage.setItem('hideUpgradeBanner', 'true')
-}
+const showUpgradeBanner = ref(true)
+const dismissUpgradeBanner = () => (showUpgradeBanner.value = false)
+
 </script>
 
 <style scoped>

@@ -44,7 +44,7 @@ class AuthenticatedSessionController extends Controller
         $this->addActiveSession($user->id);
         $this->sendDiscordSessionLog($request, $user, 'login');
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('events-public', absolute: false));
     }
 
     public function destroy(Request $request)

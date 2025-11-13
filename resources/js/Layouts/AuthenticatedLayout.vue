@@ -24,7 +24,7 @@
                             Earnings
                         </Link>
 
-                        <Link :href="route('dashboard')"
+                        <Link :href="route('events.create')"
                             class="px-3 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-semibold text-black bg-gradient-to-r from-yellow-300 to-yellow-400 hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-md hover:shadow-lg whitespace-nowrap">
                             Criar evento
                         </Link>
@@ -120,7 +120,7 @@
                     </div>
 
                     <div class="flex md:hidden items-center gap-2">
-                        <Link :href="route('dashboard')"
+                        <Link :href="route('events.create')"
                             class="bg-gradient-to-r from-yellow-300 to-yellow-400 text-black px-3 py-1.5 rounded-full text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-sm whitespace-nowrap">
                             Criar
                         </Link>

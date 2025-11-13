@@ -52,7 +52,7 @@ class GoogleAuthController extends Controller
             $this->addActiveSession($user->id);
             $this->sendDiscordSessionLog($request, $user, 'login');
 
-            return redirect()->intended('/dashboard');
+            return redirect()->intended('/events-public');
         } catch (\Throwable $e) {
             Log::error('Erro no login Google: ' . $e->getMessage());
             $this->sendDiscordSessionLog($request, null, 'error');
