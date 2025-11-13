@@ -22,9 +22,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
-
-// Importe os SVGs como módulos
-// import logoSvg from '@/images/svg-icons/logo.svg'
 import entrarSvg from '@/images/svg-icons/entrar-button.svg'
 import registerSvg from '@/images/svg-icons/register-button.svg'
 import listSvg from '@/images/svg-icons/list-button.svg'
