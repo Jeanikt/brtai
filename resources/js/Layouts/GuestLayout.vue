@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-gray-50 font-prompt">
+    <div class="min-h-screen bg-gray-50 font-prompt ">
         <nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/60 z-40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-16">
@@ -8,19 +8,6 @@
                     </Link>
 
                     <div class="hidden md:flex items-center space-x-1">
-                        <div class="relative mx-4">
-                            <div
-                                class="flex items-center bg-gray-100/80 rounded-full px-4 py-2 w-64 transition-all duration-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00A859]/20 focus-within:shadow-sm">
-                                <svg class="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                                <input type="text" placeholder="Buscar eventos..."
-                                    class="bg-transparent border-0 text-sm text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-0 w-full">
-                            </div>
-                        </div>
-
                         <div class="flex items-center space-x-1">
                             <Link href="#" class="nav-link group">
                             <span class="nav-link-text">Todos Lugares</span>
@@ -65,19 +52,6 @@
                     leave-from-class="transform opacity-100 translate-y-0"
                     leave-to-class="transform opacity-0 -translate-y-2">
                     <div v-if="showingNavigationDropdown" class="md:hidden border-t border-gray-200/60 py-4 space-y-3">
-                        <div class="relative">
-                            <div
-                                class="flex items-center bg-gray-100/80 rounded-full px-4 py-3 transition-all duration-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00A859]/20">
-                                <svg class="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                                <input type="text" placeholder="Buscar eventos..."
-                                    class="bg-transparent border-0 text-sm text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-0 w-full">
-                            </div>
-                        </div>
-
                         <div class="space-y-2">
                             <Link href="#" class="mobile-nav-link">
                             Todos Lugares
@@ -144,10 +118,6 @@ const showingNavigationDropdown = ref(false)
     @apply relative z-10;
 }
 
-/* MELHORIA:
-  - Aumentada a opacidade do '::before' para um feedback
-    visual de hover mais perceptível.
-*/
 .nav-link::before {
     content: '';
     @apply absolute inset-0 rounded-full bg-gradient-to-r from-[#00A859]/20 to-[#00A859]/10 opacity-0 transition-opacity duration-200;
@@ -161,17 +131,10 @@ const showingNavigationDropdown = ref(false)
     @apply px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 transform hover:scale-105;
 }
 
-/* MELHORIA:
-  - Adicionado um estado de 'hover' real ao gradiente, 
-    escurecendo-o levemente para melhor feedback.
-*/
 .auth-btn.primary {
     @apply bg-gradient-to-r from-[#00A859] to-[#00A859]/90 text-white shadow-sm hover:shadow-md hover:from-[#00964f] hover:to-[#008c4a];
 }
 
-/* MELHORIA:
-  - Leve ajuste no hover para consistência.
-*/
 .auth-btn.secondary {
     @apply text-gray-700 hover:text-[#00A859] hover:bg-gray-100;
 }

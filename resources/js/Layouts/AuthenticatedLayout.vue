@@ -3,7 +3,7 @@
         <NotificationContainer ref="notificationContainer" />
         <LoadingSpinner :show="globalLoading.isLoading.value" :message="globalLoading.loadingMessage.value" />
 
-        <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-40">
+        <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-40 ">
             <div class="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-10">
                 <div class="flex justify-between items-center h-14 sm:h-16">
                     <Link :href="route('dashboard')" class="flex items-center">

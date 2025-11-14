@@ -1,6 +1,28 @@
 <template>
     <component :is="layout">
-        <!-- Hero Section -->
+        <div class="flex justify-center mb-8 mt-4">
+            <div class="relative w-full max-w-2xl">
+                <div
+                    class="flex items-center bg-white rounded-full shadow-sm border border-gray-300 px-4 py-3 transition-all duration-200 focus-within:border-[#00A859] focus-within:ring-2 focus-within:ring-[#00A859]/20">
+                    <svg class="w-5 h-5 text-gray-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input v-model="searchQuery" @input="handleSearchInput" type="text"
+                        placeholder="Buscar eventos por nome, local, descrição..."
+                        class="bg-transparent border-0 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-0 w-full">
+                    <button v-if="searchQuery" @click="clearSearch"
+                        class="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="text-center mb-12">
             <div class="max-w-3xl mx-auto">
                 <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
@@ -14,7 +36,6 @@
             </div>
         </div>
 
-        <!-- Filters & Sorting -->
         <div
             class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 p-6 bg-white rounded-2xl shadow-sm border border-gray-200/60">
             <div class="flex flex-wrap gap-2">
@@ -43,13 +64,11 @@
             </div>
         </div>
 
-        <!-- Events Grid -->
         <div v-if="filteredEvents.length > 0"
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
             <div v-for="event in filteredEvents" :key="event.id"
                 class="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden hover:shadow-lg transition-all duration-300 hover:translate-y-[-2px] group">
 
-                <!-- Event Image -->
                 <div class="h-48 relative overflow-hidden">
                     <img v-if="event.header_image_url" :src="event.header_image_url" :alt="event.name"
                         class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -58,7 +77,6 @@
                         <span class="text-white text-lg font-semibold">🎉 {{ event.name }}</span>
                     </div>
 
-                    <!-- Event Badges -->
                     <div class="absolute top-3 left-3 flex flex-col gap-1">
                         <span v-if="event.is_free"
                             class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-sm">
@@ -86,9 +104,7 @@
                     </div>
                 </div>
 
-                <!-- Event Content -->
                 <div class="p-5">
-                    <!-- Event Title & Description -->
                     <h3
                         class="text-lg font-bold text-gray-900 mb-2 line-clamp-2 leading-tight group-hover:text-[#00A859] transition-colors">
                         {{ event.name }}
@@ -97,7 +113,6 @@
                         {{ event.description || 'Uma experiência incrível te aguarda!' }}
                     </p>
 
-                    <!-- Event Details -->
                     <div class="space-y-3 mb-4">
                         <div class="flex items-center gap-3 text-sm">
                             <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -130,7 +145,6 @@
                         </div>
                     </div>
 
-                    <!-- Price Tiers -->
                     <div class="mb-4 space-y-2">
                         <div v-for="tier in event.price_tiers" :key="tier.id"
                             class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg border border-gray-200/60">
@@ -144,7 +158,6 @@
                         </div>
                     </div>
 
-                    <!-- Action Button -->
                     <Link :href="route('events.public.show', event.slug)"
                         class="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white text-center py-3 rounded-xl font-semibold hover:from-[#00A859] hover:to-[#00A859]/90 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02] block">
                     {{ getButtonText(event) }}
@@ -153,27 +166,31 @@
             </div>
         </div>
 
-        <!-- Empty State -->
         <div v-else class="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-200/60">
-            <div class="text-gray-400 text-6xl mb-4">🎭</div>
+            <div class="text-gray-400 text-6xl mb-4">🔍</div>
             <h3 class="text-2xl font-semibold text-gray-600 mb-2">
-                Nenhum evento encontrado
+                {{ searchQuery ? 'Nenhum evento encontrado' : 'Nenhum evento encontrado' }}
             </h3>
             <p class="text-gray-500 max-w-md mx-auto mb-6">
                 {{
-                    currentFilter === 'all'
-                        ? 'Não há eventos públicos disponíveis no momento.'
-                        : `Não há eventos ${getFilterLabel()} disponíveis.`
+                    searchQuery
+                        ? `Não encontramos resultados para "${searchQuery}". Tente outros termos.`
+                        : currentFilter === 'all'
+                            ? 'Não há eventos públicos disponíveis no momento.'
+                            : `Não há eventos ${getFilterLabel()} disponíveis.`
                 }}
             </p>
-            <Link :href="route('register')"
+            <button v-if="searchQuery" @click="clearSearch"
+                class="bg-gradient-to-r from-[#00A859] to-[#00A859]/90 text-white px-6 py-3 rounded-full font-semibold hover:shadow-md transition-all duration-200 inline-flex items-center gap-2 hover:scale-105">
+                Limpar busca
+            </button>
+            <Link v-else :href="route('register')"
                 class="bg-gradient-to-r from-[#00A859] to-[#00A859]/90 text-white px-6 py-3 rounded-full font-semibold hover:shadow-md transition-all duration-200 inline-flex items-center gap-2 hover:scale-105">
             <span>+</span>
             Criar Conta para Organizar Eventos
             </Link>
         </div>
 
-        <!-- Pagination -->
         <div v-if="events.data.length > 0" class="mt-12 flex justify-center">
             <Pagination :links="events.links" />
         </div>
@@ -188,7 +205,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
 import axios from 'axios'
 
-// Use usePage para acessar as propriedades da página
 const page = usePage()
 
 const props = defineProps<{
@@ -203,7 +219,6 @@ const props = defineProps<{
     }
 }>()
 
-// Layout condicional baseado na autenticação
 const layout = computed(() => {
     return page.props.auth.user ? AuthenticatedLayout : GuestLayout
 })
@@ -211,8 +226,9 @@ const layout = computed(() => {
 const sortBy = ref(props.filters?.sort || 'distance')
 const currentFilter = ref('all')
 const locationRequested = ref(false)
+const searchQuery = ref(props.searchQuery || '')
+const searchTimeout = ref<number | null>(null)
 
-// Solicitar localização automaticamente quando a página carregar
 onMounted(() => {
     if (!props.hasLocation && !locationRequested.value) {
         requestLocationAutomatically()
@@ -221,7 +237,6 @@ onMounted(() => {
 
 const requestLocationAutomatically = async () => {
     if (!navigator.geolocation) {
-        console.log('Geolocalização não é suportada pelo seu navegador')
         return
     }
 
@@ -232,11 +247,10 @@ const requestLocationAutomatically = async () => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
                 enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 600000 // 10 minutos
+                maximumAge: 600000
             })
         })
 
-        // Usar axios em vez do router do Inertia para requisições JSON
         try {
             const response = await axios.post(route('events.public.storeLocation'), {
                 latitude: position.coords.latitude,
@@ -244,21 +258,25 @@ const requestLocationAutomatically = async () => {
             })
 
             if (response.data.success) {
-                // Recarrega a página para mostrar eventos com base na localização
                 router.reload({ only: ['events', 'hasLocation'] })
             }
         } catch (error) {
-            console.error('Erro ao salvar localização:', error)
         }
     } catch (error) {
-        console.log('Localização não permitida ou não disponível')
-        // Não mostra alerta para não incomodar o usuário
     }
 }
 
-// Computed properties for filtering
 const filteredEvents = computed(() => {
     let filtered = [...props.events.data]
+
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
+        filtered = filtered.filter(event =>
+            event.name.toLowerCase().includes(query) ||
+            event.description?.toLowerCase().includes(query) ||
+            event.location.toLowerCase().includes(query)
+        )
+    }
 
     switch (currentFilter.value) {
         case 'free':
@@ -275,13 +293,46 @@ const filteredEvents = computed(() => {
     return filtered
 })
 
-// Event availability helpers
+const handleSearchInput = () => {
+    if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value)
+    }
+
+    searchTimeout.value = setTimeout(() => {
+        router.get(route('events.public.index'),
+            {
+                search: searchQuery.value,
+                sort: sortBy.value
+            },
+            {
+                preserveState: true,
+                replace: true,
+            }
+        )
+    }, 500)
+}
+
+const clearSearch = () => {
+    searchQuery.value = ''
+    if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value)
+    }
+    router.get(route('events.public.index'),
+        {
+            sort: sortBy.value
+        },
+        {
+            preserveState: true,
+            replace: true,
+        }
+    )
+}
+
 const isEventSoldOut = (event: any) => {
     if (event.max_participants && event.confirmed_count >= event.max_participants) {
         return true
     }
 
-    // Check if all active price tiers are sold out
     const activeTiers = event.price_tiers?.filter((tier: any) => tier.is_active) || []
     if (activeTiers.length === 0) return true
 
@@ -337,7 +388,6 @@ const getFilterLabel = () => {
     return labels[currentFilter.value] || 'todos'
 }
 
-// Methods
 const setFilter = (filter: string) => {
     currentFilter.value = filter
 }
