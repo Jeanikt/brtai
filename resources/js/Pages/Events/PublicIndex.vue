@@ -1,5 +1,5 @@
 <template>
-    <GuestLayout>
+    <component :is="layout">
         <!-- Hero Section -->
         <div class="text-center mb-12">
             <div class="max-w-3xl mx-auto">
@@ -11,18 +11,6 @@
                     Encontre eventos incríveis, desde encontros casuais até experiências memoráveis.
                     Tudo em um só lugar.
                 </p>
-
-                <!-- Location Status -->
-                <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full text-sm font-medium transition-all duration-200"
-                    :class="hasLocation ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'">
-                    <div class="w-2 h-2 rounded-full animate-pulse"
-                        :class="hasLocation ? 'bg-emerald-500' : 'bg-amber-500'"></div>
-                    <span>{{ hasLocation ? '📍 Visualizando eventos por proximidade' : '📍 Ative a localização para ver eventos próximos' }}</span>
-                    <button v-if="!hasLocation" @click="requestLocation"
-                        class="ml-2 text-xs bg-amber-500 text-white px-3 py-1 rounded-full hover:bg-amber-600 transition-colors">
-                        Ativar
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -56,9 +44,9 @@
         </div>
 
         <!-- Events Grid -->
-        <div v-if="events.data.length > 0"
+        <div v-if="filteredEvents.length > 0"
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-            <div v-for="event in events.data" :key="event.id"
+            <div v-for="event in filteredEvents" :key="event.id"
                 class="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden hover:shadow-lg transition-all duration-300 hover:translate-y-[-2px] group">
 
                 <!-- Event Image -->
@@ -189,14 +177,16 @@
         <div v-if="events.data.length > 0" class="mt-12 flex justify-center">
             <Pagination :links="events.links" />
         </div>
-    </GuestLayout>
+    </component>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
+import axios from 'axios'
 
 const props = defineProps<{
     events: {
@@ -204,10 +194,64 @@ const props = defineProps<{
         links: any[]
     }
     hasLocation: boolean
+    searchQuery?: string
+    filters?: {
+        sort?: string
+    }
 }>()
 
-const sortBy = ref('distance')
+// Layout condicional baseado na autenticação
+const layout = computed(() => {
+    return props.$page.props.auth.user ? AuthenticatedLayout : GuestLayout
+})
+
+const sortBy = ref(props.filters?.sort || 'distance')
 const currentFilter = ref('all')
+const locationRequested = ref(false)
+
+// Solicitar localização automaticamente quando a página carregar
+onMounted(() => {
+    if (!props.hasLocation && !locationRequested.value) {
+        requestLocationAutomatically()
+    }
+})
+
+const requestLocationAutomatically = async () => {
+    if (!navigator.geolocation) {
+        console.log('Geolocalização não é suportada pelo seu navegador')
+        return
+    }
+
+    locationRequested.value = true
+
+    try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 600000 // 10 minutos
+            })
+        })
+
+        // Usar axios em vez do router do Inertia para requisições JSON
+        try {
+            const response = await axios.post(route('events.public.storeLocation'), {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            })
+
+            if (response.data.success) {
+                // Recarrega a página para mostrar eventos com base na localização
+                router.reload({ only: ['events', 'hasLocation'] })
+            }
+        } catch (error) {
+            console.error('Erro ao salvar localização:', error)
+        }
+    } catch (error) {
+        console.log('Localização não permitida ou não disponível')
+        // Não mostra alerta para não incomodar o usuário
+    }
+}
 
 // Computed properties for filtering
 const filteredEvents = computed(() => {
@@ -235,7 +279,7 @@ const isEventSoldOut = (event: any) => {
     }
 
     // Check if all active price tiers are sold out
-    const activeTiers = event.price_tiers.filter((tier: any) => tier.is_active)
+    const activeTiers = event.price_tiers?.filter((tier: any) => tier.is_active) || []
     if (activeTiers.length === 0) return true
 
     return activeTiers.every((tier: any) =>
@@ -300,37 +344,6 @@ const applySorting = () => {
         preserveState: true,
         replace: true,
     })
-}
-
-const requestLocation = () => {
-    if (!navigator.geolocation) {
-        alert('Geolocalização não é suportada pelo seu navegador')
-        return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            try {
-                await router.post('/events-public/location', {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
-                })
-                router.reload()
-            } catch (error) {
-                console.error('Erro ao salvar localização:', error)
-                alert('Erro ao salvar localização')
-            }
-        },
-        (error) => {
-            console.warn('Erro ao obter localização:', error)
-            alert('Não foi possível obter sua localização. Verifique as permissões do navegador.')
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 600000
-        }
-    )
 }
 
 const formatDate = (dateString: string) => {

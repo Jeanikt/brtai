@@ -1,17 +1,13 @@
 <template>
     <div class="min-h-screen bg-gray-50 font-prompt">
-        <!-- Navigation Bar -->
         <nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/60 z-40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-16">
-                    <!-- Logo -->
                     <Link href="/" class="flex items-center group">
                     <ApplicationLogo fill="#00A859" class="w-12 h-12 transition-transform group-hover:scale-105" />
                     </Link>
 
-                    <!-- Desktop Navigation -->
                     <div class="hidden md:flex items-center space-x-1">
-                        <!-- Search Bar -->
                         <div class="relative mx-4">
                             <div
                                 class="flex items-center bg-gray-100/80 rounded-full px-4 py-2 w-64 transition-all duration-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00A859]/20 focus-within:shadow-sm">
@@ -25,7 +21,6 @@
                             </div>
                         </div>
 
-                        <!-- Navigation Links -->
                         <div class="flex items-center space-x-1">
                             <Link href="#" class="nav-link group">
                             <span class="nav-link-text">Todos Lugares</span>
@@ -41,7 +36,6 @@
                             </Link>
                         </div>
 
-                        <!-- Auth Buttons -->
                         <div class="flex items-center space-x-3 ml-4">
                             <Link :href="route('login')" class="auth-btn secondary">
                             Entrar
@@ -52,12 +46,7 @@
                         </div>
                     </div>
 
-                    <!-- Mobile menu button -->
-                    <div class="flex md:hidden items-center space-x-2">
-                        <Link :href="route('login')"
-                            class="text-sm text-gray-700 hover:text-[#00A859] transition-colors px-3 py-2">
-                        Entrar
-                        </Link>
+                    <div class="flex md:hidden items-center">
                         <button @click="showingNavigationDropdown = !showingNavigationDropdown" class="mobile-menu-btn">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path v-if="!showingNavigationDropdown" stroke-linecap="round" stroke-linejoin="round"
@@ -69,7 +58,6 @@
                     </div>
                 </div>
 
-                <!-- Mobile Navigation Menu -->
                 <transition enter-active-class="transition duration-200 ease-out"
                     enter-from-class="transform opacity-0 -translate-y-2"
                     enter-to-class="transform opacity-100 translate-y-0"
@@ -77,7 +65,6 @@
                     leave-from-class="transform opacity-100 translate-y-0"
                     leave-to-class="transform opacity-0 -translate-y-2">
                     <div v-if="showingNavigationDropdown" class="md:hidden border-t border-gray-200/60 py-4 space-y-3">
-                        <!-- Mobile Search -->
                         <div class="relative">
                             <div
                                 class="flex items-center bg-gray-100/80 rounded-full px-4 py-3 transition-all duration-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00A859]/20">
@@ -91,7 +78,6 @@
                             </div>
                         </div>
 
-                        <!-- Mobile Links -->
                         <div class="space-y-2">
                             <Link href="#" class="mobile-nav-link">
                             Todos Lugares
@@ -107,8 +93,10 @@
                             </Link>
                         </div>
 
-                        <!-- Mobile Auth Buttons -->
                         <div class="pt-4 border-t border-gray-200/60 space-y-2">
+                            <Link :href="route('login')" class="w-full auth-btn secondary text-center justify-center">
+                            Entrar
+                            </Link>
                             <Link :href="route('register')" class="w-full auth-btn primary text-center justify-center">
                             Criar Conta
                             </Link>
@@ -118,14 +106,12 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
         <main class="pt-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <slot />
             </div>
         </main>
 
-        <!-- Footer -->
         <footer class="bg-white border-t border-gray-200/60 mt-auto">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="flex flex-col md:flex-row justify-between items-center">
@@ -158,9 +144,13 @@ const showingNavigationDropdown = ref(false)
     @apply relative z-10;
 }
 
+/* MELHORIA:
+  - Aumentada a opacidade do '::before' para um feedback
+    visual de hover mais perceptível.
+*/
 .nav-link::before {
     content: '';
-    @apply absolute inset-0 rounded-full bg-gradient-to-r from-[#00A859]/10 to-[#00A859]/5 opacity-0 transition-opacity duration-200;
+    @apply absolute inset-0 rounded-full bg-gradient-to-r from-[#00A859]/20 to-[#00A859]/10 opacity-0 transition-opacity duration-200;
 }
 
 .nav-link:hover::before {
@@ -171,12 +161,19 @@ const showingNavigationDropdown = ref(false)
     @apply px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 transform hover:scale-105;
 }
 
+/* MELHORIA:
+  - Adicionado um estado de 'hover' real ao gradiente, 
+    escurecendo-o levemente para melhor feedback.
+*/
 .auth-btn.primary {
-    @apply bg-gradient-to-r from-[#00A859] to-[#00A859]/90 text-white shadow-sm hover:shadow-md hover:from-[#00A859] hover:to-[#00A859];
+    @apply bg-gradient-to-r from-[#00A859] to-[#00A859]/90 text-white shadow-sm hover:shadow-md hover:from-[#00964f] hover:to-[#008c4a];
 }
 
+/* MELHORIA:
+  - Leve ajuste no hover para consistência.
+*/
 .auth-btn.secondary {
-    @apply text-gray-700 hover:text-[#00A859] hover:bg-gray-100/80;
+    @apply text-gray-700 hover:text-[#00A859] hover:bg-gray-100;
 }
 
 .mobile-menu-btn {

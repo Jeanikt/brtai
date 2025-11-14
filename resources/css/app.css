@@ -4,15 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =================================================================== */
+/* == Configurações Globais (Base)                                  == */
+/* =================================================================== */
+
 .font-prompt {
   font-family: "Prompt", sans-serif;
 }
 
-@media (max-width: 640px) {
-  .min-h-screen {
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
+.min-h-screen {
+  min-height: 100vh; /* Fallback */
+  min-height: 100dvh; /* Altura dinâmica da viewport */
 }
 
 * {
@@ -40,13 +42,31 @@ input:focus {
   border-radius: 32px;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+p, span, div {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* =================================================================== */
+/* == Media Queries Globais                                         == */
+/* =================================================================== */
+
+/* iPhone SE (375px) */
 @media (max-width: 375px) {
   .container {
-    padding-left: 12px;
-    padding-right: 12px;
+    @apply px-3; /* 12px */
   }
 }
 
+/* Touch targets */
 @media (max-width: 768px) {
   button,
   [role="button"],
@@ -56,6 +76,7 @@ input:focus {
   }
 }
 
+/* Grid de Eventos */
 @media (max-width: 640px) {
   .events-grid {
     grid-template-columns: 1fr;
@@ -70,15 +91,204 @@ input:focus {
   }
 }
 
-html {
-  scroll-behavior: smooth;
+/* =================================================================== */
+/* == Estilos de Componentes                                        == */
+/* =================================================================== */
+
+/* === Componente: NavGlass === */
+.nav-glass {
+  /* * CORREÇÃO:
+   * Removido o 'w-[430px]' fixo.
+   * Adicionado 'w-full' e 'max-w-[430px]' para que ele 
+   * ocupe 100% da tela no mobile e seja no máximo 430px no desktop.
+  */
+  @apply flex items-center justify-center w-full max-w-[430px] h-[63px] rounded-[44px] bg-white/20 backdrop-blur-[12.5px] px-4 overflow-hidden;
 }
 
-body {
-  overflow-x: hidden;
+.nav-glass-inner {
+  @apply flex items-center gap-4;
 }
 
-p, span, div {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+.nav-glass-logo {
+  @apply w-10 h-10 sm:w-20 sm:h-20;
+}
+
+.nav-glass-button {
+  @apply h-12 w-auto cursor-pointer hover:scale-105 transition-transform;
+}
+
+.nav-glass-list-icon {
+  @apply h-5 w-auto cursor-pointer hover:scale-105 transition-transform;
+}
+
+
+/* === Página: Welcome (Hero Header) === */
+.hero-header {
+  @apply relative bg-cover bg-center py-10 mb-16 flex flex-col items-center justify-center text-center;
+}
+
+.hero-overlay {
+  @apply absolute inset-0 bg-black opacity-40;
+}
+
+.hero-content {
+  @apply relative z-10 flex flex-col items-center px-4 sm:px-8 max-w-2xl w-full;
+}
+
+.hero-nav-wrapper {
+  @apply flex justify-center mb-6 w-full; /* Adicionado w-full para o NavGlass poder usar max-w */
+}
+
+.hero-title {
+  @apply text-white text-center font-prompt font-black leading-[1.1] tracking-[-0.01em] mb-6;
+}
+
+.hero-description {
+  /* * CORREÇÃO:
+   * Removido 'px-2' que causava padding duplicado 
+   * dentro do 'hero-content' (que já tem px-4).
+  */
+  @apply text-lg sm:text-xl text-white/90 leading-relaxed max-w-2xl mx-auto mb-8 sm:mb-10;
+}
+
+.hero-buttons-wrapper {
+  @apply flex flex-col sm:flex-row gap-4 sm:gap-6 w-full max-w-md items-center justify-center;
+}
+
+.btn-hero-primary {
+  @apply flex items-center justify-center gap-2 sm:gap-3 bg-[#FFF35F] text-gray-900 px-6 sm:px-10 py-4 sm:py-5 rounded-full font-bold text-base sm:text-lg shadow-lg hover:bg-[#fff684] hover:scale-105 transition-all duration-300 w-full sm:w-auto min-h-[52px] sm:min-h-[60px];
+}
+
+.btn-hero-primary-text {
+  @apply text-sm sm:text-base whitespace-nowrap;
+}
+
+.btn-hero-primary-icon {
+  @apply h-4 sm:h-5 w-auto flex-shrink-0;
+}
+
+.btn-hero-secondary {
+  /* * CORREÇÃO:
+   * O padding estava invertido (px-6 mobile, sm:px-2 desktop).
+   * Corrigido para um padding responsivo adequado.
+  */
+  @apply text-white font-prompt font-semibold bg-[#00A859] px-6 py-3 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg hover:bg-[#008c4a] hover:scale-105 transition-all duration-300 w-full sm:w-auto text-center min-h-[44px] flex items-center justify-center;
+}
+
+.btn-hero-secondary-text {
+  @apply text-sm sm:text-base;
+}
+
+
+/* === Página: Welcome (Seções de Conteúdo) === */
+.content-section {
+  @apply container mx-auto px-4 sm:px-6 mb-16 lg:mb-24;
+}
+
+.content-section-alt-padding {
+  @apply py-8 sm:py-12 lg:py-20 mb-16 lg:mb-24;
+}
+
+.content-grid {
+  @apply grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16 items-center max-w-7xl mx-auto;
+}
+
+.content-text-column {
+  @apply space-y-4 lg:space-y-6;
+}
+.content-text-column.order-left {
+  @apply order-2 lg:order-1;
+}
+
+.content-image-column {
+  @apply flex justify-center;
+}
+.content-image-column.order-right {
+  @apply order-1 lg:order-2;
+}
+.content-image-column.align-left {
+  @apply justify-center lg:justify-start;
+}
+
+.content-title {
+  @apply text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 leading-tight;
+}
+
+.content-title-highlight {
+  @apply text-[#00A859];
+}
+
+.content-description {
+  @apply text-gray-700 text-sm sm:text-base lg:text-lg leading-relaxed;
+}
+
+.content-image-wrapper {
+  @apply relative w-full max-w-xs sm:max-w-md lg:max-w-lg xl:max-w-xl;
+}
+
+.content-image {
+  @apply w-full transform hover:scale-105 transition-transform duration-300;
+}
+.content-image-shadow {
+  @apply drop-shadow-xl;
+}
+
+/* Checklist */
+.checklist {
+  @apply space-y-3 lg:space-y-4;
+}
+
+.checklist-item {
+  @apply flex items-start gap-3;
+}
+
+.checklist-icon-wrapper {
+  @apply w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-[#00A859] rounded-full flex items-center justify-center mt-1 flex-shrink-0;
+}
+
+.checklist-icon-svg {
+  @apply w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 text-white;
+}
+
+.checklist-text {
+  @apply text-gray-700 text-xs sm:text-sm lg:text-base;
+}
+
+/* Tag na Imagem (Memórias) */
+.image-tag-overlay {
+  @apply absolute min-w-[140px] sm:min-w-[160px] lg:min-w-[190px] h-[28px] sm:h-[32px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center px-3 sm:px-4 py-1 sm:py-1.5 shadow-lg;
+}
+
+.image-tag-inner {
+  @apply flex items-center gap-2 sm:gap-2.5;
+}
+
+.image-tag-icon {
+  @apply w-4 h-4 sm:w-5 sm:h-5;
+}
+
+.image-tag-text {
+  @apply text-white text-sm sm:text-base font-semibold whitespace-nowrap;
+}
+
+
+/* === Página: Welcome (Footer) === */
+.footer {
+  @apply bg-gray-100 text-white py-6 sm:py-8 lg:py-12;
+}
+
+.footer-container {
+  @apply container mx-auto px-4 sm:px-6;
+}
+
+.footer-content {
+  @apply text-center;
+}
+
+.footer-text {
+  @apply text-gray-600 text-xs sm:text-sm lg:text-base;
+}
+
+.footer-link {
+  @apply text-emerald-500;
 }

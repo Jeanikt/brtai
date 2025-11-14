@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 
 class EventPublicController extends Controller
 {
-    public function show($slug)
+    public function show(Request $request, $slug)
     {
         $event = Event::with([
             'priceTiers' => fn($query) => $query->where('is_active', true),

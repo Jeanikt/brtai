@@ -145,4 +145,12 @@ class Event extends Model
     {
         return $query->where('is_free', false);
     }
+
+    // 🔍 Scope para eventos públicos ativos
+    public function scopePublicActive($query)
+    {
+        return $query->where('is_public', true)
+            ->where('status', 'active')
+            ->where('event_date', '>', now());
+    }
 }

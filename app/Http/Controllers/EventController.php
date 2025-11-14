@@ -132,6 +132,8 @@ class EventController extends Controller
             'status' => 'draft',
             'is_public' => false,
             'is_free' => (bool) ($validated['is_free'] ?? false),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
         ];
 
         if (request()->hasFile('header_image')) {
@@ -263,6 +265,14 @@ class EventController extends Controller
             $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
             $validated['event_date'] = Carbon::parse($eventDateTime, 'America/Sao_Paulo')->setTimezone('UTC');
             unset($validated['event_time']);
+        }
+
+        // Adicionar latitude e longitude se fornecidos
+        if (isset($validated['latitude'])) {
+            $validated['latitude'] = (float) $validated['latitude'];
+        }
+        if (isset($validated['longitude'])) {
+            $validated['longitude'] = (float) $validated['longitude'];
         }
 
         if (request()->hasFile('header_image')) {

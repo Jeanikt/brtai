@@ -1,22 +1,19 @@
 <template>
-  <div class="flex items-center justify-center w-[430px] h-[63px] rounded-[44px] bg-white/20 backdrop-blur-[12.5px] px-4 overflow-hidden">
-    <div class="flex items-center gap-4">
-      <ApplicationLogo fill="white" class="w-10 h-10 sm:w-20 sm:h-20" />
+    <div class="nav-glass">
+        <div class="nav-glass-inner">
+            <ApplicationLogo fill="white" class="nav-glass-logo" />
 
-      <Link :href="route('login')">
-        <img :src="entrarSvg" alt="Entrar"
-            class="h-12 w-auto cursor-pointer hover:scale-105 transition-transform" />
-      </Link>
+            <Link :href="route('login')">
+            <img :src="entrarSvg" alt="Entrar" class="nav-glass-button" />
+            </Link>
 
-      <Link :href="route('register')">
-        <img :src="registerSvg" alt="Cadastrar"
-            class="h-12 w-auto cursor-pointer hover:scale-105 transition-transform" />
-      </Link>
+            <Link :href="route('register')">
+            <img :src="registerSvg" alt="Cadastrar" class="nav-glass-button" />
+            </Link>
 
-      <img :src="listSvg" alt="Lista"
-          class="h-5 w-auto cursor-pointer hover:scale-105 transition-transform" />
+            <img :src="listSvg" alt="Lista" class="nav-glass-list-icon" />
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup>
