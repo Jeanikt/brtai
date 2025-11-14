@@ -182,11 +182,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
 import axios from 'axios'
+
+// Use usePage para acessar as propriedades da página
+const page = usePage()
 
 const props = defineProps<{
     events: {
@@ -202,7 +205,7 @@ const props = defineProps<{
 
 // Layout condicional baseado na autenticação
 const layout = computed(() => {
-    return props.$page.props.auth.user ? AuthenticatedLayout : GuestLayout
+    return page.props.auth.user ? AuthenticatedLayout : GuestLayout
 })
 
 const sortBy = ref(props.filters?.sort || 'distance')
@@ -372,5 +375,6 @@ const formatPrice = (price: number) => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    line-clamp: 2;
 }
 </style>
