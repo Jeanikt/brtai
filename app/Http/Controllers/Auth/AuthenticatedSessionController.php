@@ -44,6 +44,15 @@ class AuthenticatedSessionController extends Controller
         $this->addActiveSession($user->id);
         $this->sendDiscordSessionLog($request, $user, 'login');
 
+        // ✅ Resposta para mobile
+        if ($request->wantsJson() || $this->isMobileRequest($request)) {
+            return response()->json([
+                'user' => $user,
+                'token' => $user->createToken('mobile-token')->plainTextToken,
+                'redirect_to' => route('dashboard', absolute: false)
+            ]);
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
@@ -57,7 +66,24 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        // ✅ Resposta para mobile
+        if ($request->wantsJson() || $this->isMobileRequest($request)) {
+            return response()->json([
+                'message' => 'Logged out successfully'
+            ]);
+        }
+
         return redirect('/');
+    }
+
+    /**
+     * Detecta se a requisição vem do app mobile
+     */
+    private function isMobileRequest(Request $request): bool
+    {
+        return $request->header('X-Capacitor') === 'true' ||
+            str_contains($request->header('User-Agent', ''), 'Capacitor') ||
+            $request->header('X-Requested-With') === 'com.brotaai.app';
     }
 
     private function addActiveSession(string $userId): void
@@ -105,6 +131,7 @@ class AuthenticatedSessionController extends Controller
                     ['name' => '🧭 Navegador', 'value' => $browser, 'inline' => true],
                     ['name' => '👥 Sessões Ativas', 'value' => (string) $activeCount, 'inline' => true],
                     ['name' => '📅 Data/Hora', 'value' => now()->toDateTimeString(), 'inline' => true],
+                    ['name' => '📱 Plataforma', 'value' => $this->isMobileRequest($request) ? 'Mobile App' : 'Web', 'inline' => true],
                 ],
                 'footer' => ['text' => 'BrotaAI • Sessões'],
                 'timestamp' => now()->toIso8601String(),
